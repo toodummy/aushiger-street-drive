@@ -1,0 +1,65 @@
+name: Deploy Aushiger to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'index.html'
+      - '*.js'
+      - '*.css'
+      - '*.json'
+      - '*.bin'
+      - 'cars/**'
+      - 'textures/**'
+      - 'vendor/**'
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Check out game
+        uses: actions/checkout@v6
+        with:
+          ref: main
+      - name: Verify game files
+        shell: bash
+        run: |
+          set -euo pipefail
+          for file in index.html app-v3.js style.css route.json street.part0.bin street.part1.bin street.part2.bin cars/lada-21074.glb cars/lada-kalina.glb vendor/three/LICENSE; do
+            test -s "$file" || { echo "Missing game file: $file"; exit 1; }
+          done
+          find . -name '*.js' -not -path './.git/*' -print0 | while IFS= read -r -d '' file; do
+            node --input-type=module --check < "$file"
+          done
+      - name: Prepare static site
+        run: |
+          mkdir _site
+          cp index.html *.js *.css route.json street.part*.bin _site/
+          cp -R cars textures vendor _site/
+          touch _site/.nojekyll
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
+      - name: Upload site
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: _site
+      - name: Publish
+        id: deployment
+        uses: actions/deploy-pages@v4
