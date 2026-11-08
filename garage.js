@@ -105,7 +105,7 @@ export function createGarage(scene,onPause,onStart){
  function eye(view='interior'){
   const interior=view==='interior'&&!open;
   if(cockpit)cockpit.visible=interior;
-  if(loaded)loaded.root.visible=!interior;
+  if(loaded){loaded.root.visible=true;loaded.root.traverse(o=>{if(/steer/i.test(o.name))o.visible=!interior;});}
   if(!loaded){const fallback=view==='outside'?new THREE.Vector3(0,3.1,7):new THREE.Vector3(0,1.72,0);return fallback.applyQuaternion(rotation).add(position);}
   if(view==='interior')return seat.clone().applyQuaternion(rotation).add(position);
   const yaw=settings.get(selected)?.yaw||0;
@@ -113,5 +113,5 @@ export function createGarage(scene,onPause,onStart){
   local.applyAxisAngle(new THREE.Vector3(0,1,0),yaw);return local.applyQuaternion(rotation).add(position);
  }
  
- drawList();show();choose(builtins[0].id);return {get isOpen(){return open;},get hasCar(){return !!loaded;},show,sync,eye};
+ drawList();show();choose(builtins[0].id);return {get debugNodes(){const list=[];loaded?.root.traverse(o=>{if(o.name)list.push(o.name);});return list;},get isOpen(){return open;},get hasCar(){return !!loaded;},show,sync,eye};
 }

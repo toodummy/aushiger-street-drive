@@ -1,5 +1,5 @@
 import {addLandscape} from './landscape.js?v=6';
-import {createGarage} from './garage.js?v=15';
+import {createGarage} from './garage.js?v=16';
 import * as THREE from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {EffectComposer} from 'three/addons/postprocessing/EffectComposer.js';
@@ -179,7 +179,7 @@ renderer.setAnimationLoop(()=>{
     $('#route-progress').style.width=(state.distance/1500*100)+'%';
     $('#segment').textContent=state.distance<160?'North entrance':state.distance<590?'Hillside descent':state.distance<700?'Village entrance':state.distance<935?'Village compounds':state.distance<1010?'Bus stop & crossing':'Village street';
     $('#fps').textContent=fps+' fps';hudElapsed=0;
-    $('#diagnostics').textContent=JSON.stringify({ready,garage:garage?.isOpen,carLoaded:garage?.hasCar,quality,shadowMap:renderer.shadowMap.enabled,mouseLook:document.pointerLockElement===renderer.domElement,yaw:state.yaw,pitch:state.pitch,mode:state.free?'free':'drive',distance:state.distance,camera:camera.position.toArray(),textures:assetStatus,details,drawCalls:renderer.info.render.calls,triangles:renderer.info.render.triangles});
+    $('#diagnostics').textContent=JSON.stringify({ready,garage:garage?.isOpen,nodes:garage?.debugNodes,carLoaded:garage?.hasCar,quality,shadowMap:renderer.shadowMap.enabled,mouseLook:document.pointerLockElement===renderer.domElement,yaw:state.yaw,pitch:state.pitch,mode:state.free?'free':'drive',distance:state.distance,camera:camera.position.toArray(),textures:assetStatus,details,drawCalls:renderer.info.render.calls,triangles:renderer.info.render.triangles});
   }
 });
 addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);composer?.setSize(innerWidth,innerHeight);});
