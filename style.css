@@ -23,3 +23,5 @@
 @media(max-height:650px) and (min-width:701px){.showroom-copy{top:17%}.garage-card h2{font-size:45px}.showroom-bottom{bottom:3%}#car-preview{inset:6% 0 12% 29%}}
 
 #car-preview{cursor:grab;touch-action:pan-y}#car-preview.dragging{cursor:grabbing;touch-action:none}
+
+.view-heading{font-size:9px;letter-spacing:.14em;color:#9aaca3;margin:0 0 7px}.camera-views{display:flex;gap:5px;margin-bottom:12px}.camera-views button{flex:1;padding:9px 4px;font-size:10px;color:#b9c8be}.camera-views button[aria-pressed=true]{background:#d8c491;color:#202822;border-color:#d8c491}

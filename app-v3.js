@@ -1,5 +1,5 @@
 import {addLandscape} from './landscape.js?v=6';
-import {createGarage} from './garage.js?v=11';
+import {createGarage} from './garage.js?v=12';
 import * as THREE from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {EffectComposer} from 'three/addons/postprocessing/EffectComposer.js';
@@ -29,7 +29,7 @@ const lookMatrix=new THREE.Matrix4(),lookEuler=new THREE.Euler(0,0,0,'YXZ');
 const freePosition=new THREE.Vector3();
 let route,ready=false,lighting,details,world,packs,drag=null,quality='balanced',photoSky=false;
 let composer,ssao,renderPass,outputPass,landscape,garage;
-let frames=0,frameTime=0,fps=0,hudElapsed=0;
+let frames=0,frameTime=0,fps=0,hudElapsed=0,driveView='interior';
 
 function sample(d){
   d=clamp(d,0,1499.99);const i=Math.min(route.length-2,Math.floor(d/2)),a=route[i],b=route[i+1],f=(d-a[0])/(b[0]-a[0]);
@@ -54,8 +54,9 @@ function pose(dt=0){
     const carPosition=p.clone().addScaledVector(right,state.lateral);
     lookMatrix.lookAt(carPosition,carPosition.clone().add(forward),up);baseQ.setFromRotationMatrix(lookMatrix);
     garage?.sync(carPosition,baseQ,false);
-    camera.position.copy(garage?.eye()||carPosition.clone().add(new THREE.Vector3(0,1.72,0)));
+    camera.position.copy(garage?.eye(driveView)||carPosition.clone().add(new THREE.Vector3(0,1.72,0)));
     camera.quaternion.copy(baseQ).multiply(viewQ);
+    if(driveView==='outside')camera.quaternion.multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.12,0,0)));
   }
   camera.updateMatrixWorld();
 }
@@ -72,6 +73,7 @@ function toggleFree(){
   keys.clear();updateControls();
 }
 function toggleCruise(){if(!state.free&&ready&&!garage?.isOpen){state.cruise=!state.cruise;updateControls();}}
+for(const button of document.querySelectorAll('[data-view]'))button.addEventListener('click',()=>{driveView=button.dataset.view;if(state.free)toggleFree();document.querySelectorAll('[data-view]').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));state.yaw=state.pitch=0;pose();});
 $('#cruise').onclick=toggleCruise;$('#reset').onclick=()=>reset();$('#mode').onclick=toggleFree;
 $('#center').onclick=()=>{state.yaw=state.pitch=0;};
 $('#location').onchange=e=>reset(Number(e.target.value));

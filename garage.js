@@ -101,7 +101,13 @@ export function createGarage(scene,onPause,onStart){
  $('#open-garage').onclick=()=>show();$('#begin-drive').onclick=()=>{if(busy)return;open=false;$('#garage').hidden=true;document.body.classList.remove('garage-open');onStart();};
  function show(){open=true;onPause();document.exitPointerLock?.();document.body.classList.remove('minimal');$('#garage').hidden=false;document.body.classList.add('garage-open');drawList();startPreview();}
  function sync(p,q,free){position.copy(p);rotation.copy(q);vehicle.position.copy(p);vehicle.quaternion.copy(q);vehicle.visible=!!loaded&&!free;}
- function eye(){return loaded?seat.clone().applyQuaternion(rotation).add(position):position.clone().add(new THREE.Vector3(0,1.72,0));}
+ function eye(view='interior'){
+  if(!loaded){const fallback=view==='outside'?new THREE.Vector3(0,3.1,7):new THREE.Vector3(0,1.72,0);return fallback.applyQuaternion(rotation).add(position);}
+  if(view==='interior')return seat.clone().applyQuaternion(rotation).add(position);
+  const yaw=settings.get(selected)?.yaw||0;
+  const local=view==='hood'?new THREE.Vector3(0,loaded.size.y*.94,-loaded.size.z*.25):new THREE.Vector3(0,loaded.size.y*1.9,loaded.size.z*1.75);
+  local.applyAxisAngle(new THREE.Vector3(0,1,0),yaw);return local.applyQuaternion(rotation).add(position);
+ }
  
  drawList();show();choose(builtins[0].id);return {get isOpen(){return open;},get hasCar(){return !!loaded;},show,sync,eye};
 }
