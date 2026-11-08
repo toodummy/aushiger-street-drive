@@ -81,7 +81,7 @@ export function createGarage(scene,onPause,onStart){
 
  function message(s){$('#garage-message').textContent=s;}
  function saveSetting(){if(!selected)return;settings.set(selected,{yaw:Number($('#car-facing').value),height:Number($('#seat-height').value),forward:Number($('#seat-forward').value)});try{localStorage.setItem('aushiger-seat-'+selected,JSON.stringify(settings.get(selected)));}catch{}applySettings();}
- function applySettings(){if(!loaded)return;const s=settings.get(selected)||{yaw:0,height:.82,forward:-.08};loaded.root.rotation.y=s.yaw;seat.set(loaded.driverEye?.x??-loaded.size.x*.23,Math.max(.65,loaded.size.y*s.height),loaded.size.z*s.forward);if(cockpit)cockpit.position.copy(seat);}
+ function applySettings(){if(!loaded)return;const s=settings.get(selected)||{yaw:0,height:.82,forward:-.08};loaded.root.rotation.y=s.yaw;seat.set(loaded.driverEye?.x??-loaded.size.x*.23,Math.max(.65,loaded.size.y*s.height),loaded.size.z*s.forward);if(cockpit)cockpit.position.copy(seat).add(new THREE.Vector3(0,.24,-.22));}
  for(const id of ['#car-facing','#seat-height','#seat-forward'])$(id).addEventListener('input',saveSetting);
  async function choose(id){
   if(busy)return;selected=id;busy=true;$('#begin-drive').disabled=true;drawList();
@@ -100,10 +100,12 @@ export function createGarage(scene,onPause,onStart){
  async function importFiles(files){if(busy||!files.length)return;const list=Array.from(files);if(!list.some(f=>/\.(glb|gltf)$/i.test(f.name))){message('No GLB or GLTF found. Upload the model here or send its ZIP in chat for conversion.');return;}const id=crypto.randomUUID(),main=list.find(f=>/\.(glb|gltf)$/i.test(f.name));const item={id,name:main.name.replace(/\.(glb|gltf)$/i,''),files:list};items.push(item);await choose(id);if(selected===id){try{await records('put',item);}catch{message('Car loaded for this session. Your browser could not save it; select it again next time.');}}else items=items.filter(i=>i.id!==id);drawList();}
  
  $('#open-garage').onclick=()=>show();$('#begin-drive').onclick=()=>{if(busy)return;open=false;$('#garage').hidden=true;document.body.classList.remove('garage-open');onStart();};
- function show(){open=true;onPause();document.exitPointerLock?.();document.body.classList.remove('minimal');$('#garage').hidden=false;document.body.classList.add('garage-open');drawList();startPreview();}
+ function show(){open=true;if(loaded)loaded.root.traverse(o=>{if(/^(Steering[_ .-]?Wheel|Dash|Dashboard)(?:[._-].*)?$/i.test(o.name))o.visible=true;});onPause();document.exitPointerLock?.();document.body.classList.remove('minimal');$('#garage').hidden=false;document.body.classList.add('garage-open');drawList();startPreview();}
  function sync(p,q,free){position.copy(p);rotation.copy(q);vehicle.position.copy(p);vehicle.quaternion.copy(q);vehicle.visible=!!loaded&&!free;}
  function eye(view='interior'){
-  if(cockpit)cockpit.visible=view==='interior'&&!open;
+  const interior=view==='interior'&&!open;
+  if(cockpit)cockpit.visible=interior;
+  if(loaded)loaded.root.traverse(o=>{if(/^(Steering[_ .-]?Wheel|Dash|Dashboard)(?:[._-].*)?$/i.test(o.name))o.visible=!interior;});
   if(!loaded){const fallback=view==='outside'?new THREE.Vector3(0,3.1,7):new THREE.Vector3(0,1.72,0);return fallback.applyQuaternion(rotation).add(position);}
   if(view==='interior')return seat.clone().applyQuaternion(rotation).add(position);
   const yaw=settings.get(selected)?.yaw||0;
