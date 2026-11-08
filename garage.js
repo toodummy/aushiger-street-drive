@@ -1,3 +1,4 @@
+import {makeCockpit} from './cockpit.js?v=1';
 import * as THREE from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 const $=s=>document.querySelector(s);
@@ -41,7 +42,7 @@ export async function loadCar(files){
 }
 export function createGarage(scene,onPause,onStart){
  const vehicle=new THREE.Group();scene.add(vehicle);vehicle.visible=false;
- let selected=null,loaded=null,items=[...builtins],busy=false,open=true;
+ let selected=null,loaded=null,items=[...builtins],busy=false,open=true,cockpit=null;
  const settings=new Map(),seat=new THREE.Vector3(),position=new THREE.Vector3(),rotation=new THREE.Quaternion();
  // Independent showroom scene: clones share the actual selected model's geometry.
  const previewBox=$('#car-preview'),fallback=$('#car-preview-fallback'),previewLabel=$('#preview-label');
@@ -80,7 +81,7 @@ export function createGarage(scene,onPause,onStart){
 
  function message(s){$('#garage-message').textContent=s;}
  function saveSetting(){if(!selected)return;settings.set(selected,{yaw:Number($('#car-facing').value),height:Number($('#seat-height').value),forward:Number($('#seat-forward').value)});try{localStorage.setItem('aushiger-seat-'+selected,JSON.stringify(settings.get(selected)));}catch{}applySettings();}
- function applySettings(){if(!loaded)return;const s=settings.get(selected)||{yaw:0,height:.82,forward:-.08};loaded.root.rotation.y=s.yaw;seat.set(loaded.driverEye?.x??-loaded.size.x*.23,Math.max(.65,loaded.size.y*s.height),loaded.size.z*s.forward);}
+ function applySettings(){if(!loaded)return;const s=settings.get(selected)||{yaw:0,height:.82,forward:-.08};loaded.root.rotation.y=s.yaw;seat.set(loaded.driverEye?.x??-loaded.size.x*.23,Math.max(.65,loaded.size.y*s.height),loaded.size.z*s.forward);if(cockpit)cockpit.position.copy(seat);}
  for(const id of ['#car-facing','#seat-height','#seat-forward'])$(id).addEventListener('input',saveSetting);
  async function choose(id){
   if(busy)return;selected=id;busy=true;$('#begin-drive').disabled=true;drawList();
@@ -88,7 +89,7 @@ export function createGarage(scene,onPause,onStart){
    if(!id){dispose(loaded?.root);vehicle.clear();loaded=null;$('#seat-controls').hidden=true;message('Explore the road without a vehicle.');}
    else{
     message('Loading your car and its textures…');const item=items.find(i=>i.id===id),result=await loadCar(await carFiles(item));result.name=item.name;if(item.seat&&!settings.has(id))settings.set(id,result.driverEye?{yaw:0,height:result.driverEye.y/result.size.y,forward:result.driverEye.z/result.size.z}:item.seat);
-    dispose(loaded?.root);vehicle.clear();loaded=result;vehicle.add(result.root);
+    dispose(loaded?.root);if(cockpit)dispose(cockpit);vehicle.clear();loaded=result;vehicle.add(result.root);cockpit=makeCockpit(id==='lada-kalina-v1');vehicle.add(cockpit);
     try{const s=JSON.parse(localStorage.getItem('aushiger-seat-'+id));if(s)settings.set(id,s);}catch{}
     const s=settings.get(id)||{yaw:0,height:.82,forward:-.08};$('#car-facing').value=String(s.yaw);$('#seat-height').value=String(s.height);$('#seat-forward').value=String(s.forward);applySettings();$('#seat-controls').hidden=false;message(result.name+' selected. Start driving to view its actual hood from the driver’s seat.');
    }
@@ -102,6 +103,7 @@ export function createGarage(scene,onPause,onStart){
  function show(){open=true;onPause();document.exitPointerLock?.();document.body.classList.remove('minimal');$('#garage').hidden=false;document.body.classList.add('garage-open');drawList();startPreview();}
  function sync(p,q,free){position.copy(p);rotation.copy(q);vehicle.position.copy(p);vehicle.quaternion.copy(q);vehicle.visible=!!loaded&&!free;}
  function eye(view='interior'){
+  if(cockpit)cockpit.visible=view==='interior'&&!open;
   if(!loaded){const fallback=view==='outside'?new THREE.Vector3(0,3.1,7):new THREE.Vector3(0,1.72,0);return fallback.applyQuaternion(rotation).add(position);}
   if(view==='interior')return seat.clone().applyQuaternion(rotation).add(position);
   const yaw=settings.get(selected)?.yaw||0;
