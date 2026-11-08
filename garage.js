@@ -45,7 +45,7 @@ export function createGarage(scene,onPause,onStart){
  const settings=new Map(),seat=new THREE.Vector3(),position=new THREE.Vector3(),rotation=new THREE.Quaternion();
  // Independent showroom scene: clones share the actual selected model's geometry.
  const previewBox=$('#car-preview'),fallback=$('#car-preview-fallback'),previewLabel=$('#preview-label');
- let previewRenderer=null,previewScene=null,previewCamera=null,previewTurntable=null,previewFrame=0;
+ let previewRenderer=null,previewScene=null,previewCamera=null,previewTurntable=null,previewFrame=0,dragPointer=null,lastDragX=0;
  try{
   previewRenderer=new THREE.WebGLRenderer({alpha:true,antialias:true,powerPreference:'low-power'});
   previewRenderer.setPixelRatio(Math.min(devicePixelRatio||1,1.5));
@@ -62,17 +62,21 @@ export function createGarage(scene,onPause,onStart){
  function updatePreview(){
   if(!previewRenderer)return;
   previewTurntable.clear();
-  if(loaded){const clone=loaded.root.clone(true);clone.rotation.y=0;previewTurntable.add(clone);fallback.hidden=true;previewLabel.textContent=loaded.name.toUpperCase()+' · 3D VIEW';}
+  if(loaded){const clone=loaded.root.clone(true);clone.rotation.y=0;previewTurntable.add(clone);fallback.hidden=true;previewLabel.textContent='DRAG TO ROTATE · '+loaded.name.toUpperCase();}
   else{fallback.hidden=true;previewLabel.textContent='SELECT A CAR';}
  }
  function animatePreview(){
   if(!open||!previewRenderer){previewFrame=0;return;}
   const w=previewBox.clientWidth,h=previewBox.clientHeight;
   if(w&&h){const ratio=previewRenderer.getPixelRatio();if(previewRenderer.domElement.width!==Math.floor(w*ratio)||previewRenderer.domElement.height!==Math.floor(h*ratio)){previewRenderer.setSize(w,h,false);previewCamera.aspect=w/h;previewCamera.updateProjectionMatrix();}
-   previewTurntable.rotation.y+=.006;previewRenderer.render(previewScene,previewCamera);}
+   if(dragPointer===null)previewTurntable.rotation.y+=.006;previewRenderer.render(previewScene,previewCamera);}
   previewFrame=requestAnimationFrame(animatePreview);
  }
  function startPreview(){if(previewRenderer&&!previewFrame)previewFrame=requestAnimationFrame(animatePreview);}
+ previewBox.addEventListener('pointerdown',e=>{if(!previewTurntable||e.button!==0)return;dragPointer=e.pointerId;lastDragX=e.clientX;previewBox.setPointerCapture(e.pointerId);previewBox.classList.add('dragging');e.preventDefault();});
+ previewBox.addEventListener('pointermove',e=>{if(e.pointerId!==dragPointer)return;previewTurntable.rotation.y+=(e.clientX-lastDragX)*.012;lastDragX=e.clientX;});
+ function endPreviewDrag(e){if(e.pointerId!==dragPointer)return;dragPointer=null;previewBox.classList.remove('dragging');}
+ previewBox.addEventListener('pointerup',endPreviewDrag);previewBox.addEventListener('pointercancel',endPreviewDrag);previewBox.addEventListener('lostpointercapture',endPreviewDrag);
 
  function message(s){$('#garage-message').textContent=s;}
  function saveSetting(){if(!selected)return;settings.set(selected,{yaw:Number($('#car-facing').value),height:Number($('#seat-height').value),forward:Number($('#seat-forward').value)});try{localStorage.setItem('aushiger-seat-'+selected,JSON.stringify(settings.get(selected)));}catch{}applySettings();}

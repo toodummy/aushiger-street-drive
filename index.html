@@ -4,7 +4,7 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="description" content="Explore a reference-based reconstruction of the north entrance and main street of Aushiger. Drive south or explore with a free camera.">
 <title>Aushiger · Street Drive</title>
-<link rel="stylesheet" href="style.css?v=10">
+<link rel="stylesheet" href="style.css?v=11">
 <script type="importmap">{"imports":{"three":"./vendor/three/build/three.module.js","three/addons/":"./vendor/three/examples/jsm/"}}</script>
 </head>
 <body>
@@ -27,7 +27,7 @@
  <div class="showroom-top"><div class="showroom-brand">AUSHIGER <span>STREET DRIVE</span></div><div class="showroom-tag">THE CAUCASUS · 43° N</div></div><div class="showroom-copy"><div class="eyebrow">THE ROAD IS WAITING</div>
  <h2 id="garage-title">Choose your ride.</h2>
  <p class="garage-intro">Choose your car and take the road through Aushiger.</p></div>
- <div id="car-preview" aria-label="Rotating 3D car preview"><img id="car-preview-fallback" src="cars/lada-21074.jpg" alt="Lada 21074"><span id="preview-label">LADA 21074 · 3D VIEW</span></div>
+ <div id="car-preview" aria-label="Rotating 3D car preview"><img id="car-preview-fallback" src="cars/lada-21074.jpg" alt="Lada 21074"><span id="preview-label">DRAG TO ROTATE</span></div>
  <div class="showroom-bottom"><div class="selection-label">SELECT YOUR CAR <span>01 / 02</span></div><div id="car-list" aria-label="Available cars"></div>
  <fieldset id="seat-controls" hidden><legend>Driver’s seat</legend>
  <label>Front direction<select id="car-facing"><option value="0">Original</option><option value="3.141592653589793">Turn 180°</option></select></label>
@@ -40,7 +40,7 @@
  </div></section>
 <div id="load"><div class="loading-card"><div class="eyebrow">AUSHIGER · NORTH TO SOUTH</div><h2>A road into the Caucasus.</h2><p id="progress">Preparing your drive</p><div class="loading-track"><i id="loadbar"></i></div><button id="retry" hidden>Reload</button></div></div>
 <script type="module">
-import('./app-v3.js?v=10').catch(error=>{
+import('./app-v3.js?v=11').catch(error=>{
   console.error(error);
   const progress=document.querySelector('#progress');
   if(progress)progress.textContent='Unable to start: '+error.message;

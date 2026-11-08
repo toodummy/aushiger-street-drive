@@ -21,3 +21,5 @@
 #garage-message{min-height:0;margin:10px 0;font-size:11px;color:#b5c2bd}#begin-drive{padding:17px;background:#d9bd80;border:0;color:#17201e;font-size:12px;letter-spacing:.12em;font-weight:800}#begin-drive:hover{background:#efd79d}.garage-controls{text-align:left;color:#899b9b;letter-spacing:.1em;font-size:9px}.garage-controls span{color:#d9bd80;padding:0 6px}#seat-controls{display:none!important}
 @media(max-width:700px){.showroom-top{top:22px}.showroom-tag{font-size:8px}.showroom-copy{top:12%;width:85%;left:6%}.garage-card h2{font-size:40px;margin:10px 0}.garage-intro{font-size:12px}.showroom-copy .eyebrow{font-size:9px}#car-preview{inset:25% 0 30% 0}#preview-label{bottom:4%;right:6%}.showroom-bottom{bottom:3%;width:88%}.garage-controls{font-size:8px}#garage-message{font-size:10px}}
 @media(max-height:650px) and (min-width:701px){.showroom-copy{top:17%}.garage-card h2{font-size:45px}.showroom-bottom{bottom:3%}#car-preview{inset:6% 0 12% 29%}}
+
+#car-preview{cursor:grab;touch-action:pan-y}#car-preview.dragging{cursor:grabbing;touch-action:none}
