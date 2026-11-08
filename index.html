@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Explore a reference-based reconstruction of the north entrance and main street of Aushiger. Drive south or explore with a free camera.">
+<title>Aushiger · Street Drive</title>
+<link rel="stylesheet" href="style.css?v=9">
+<script type="importmap">{"imports":{"three":"./vendor/three/build/three.module.js","three/addons/":"./vendor/three/examples/jsm/"}}</script>
+</head>
+<body>
+<header class="panel">
+  <div class="eyebrow"><span class="live-dot"></span> CAUCASUS · SPRING <span id="mode-label">SOUTHBOUND</span></div>
+  <div class="title-row"><h1>Aushiger</h1><button id="hide-ui" class="icon-button" title="Hide controls (H)" aria-label="Hide controls">−</button></div>
+  <p class="subtitle">The northern descent</p>
+  <div class="actions"><button id="cruise" class="primary" aria-pressed="false">Start cruise</button><button id="mode" aria-pressed="false">Free camera</button></div>
+  <button id="open-garage" class="garage-link">Choose car / Driver’s seat</button><div class="secondary"><button id="reset">Restart</button><button id="center">Centre view</button></div>
+  <label class="select-row">Jump to <select id="location" aria-label="Route location"><option value="0">North entrance</option><option value="340">Hillside descent</option><option value="620">Village entrance</option><option value="745">Village compounds</option><option value="945">Bus stop & crossing</option><option value="1110">Village street</option></select></label>
+  <details id="about"><summary>Controls & scene details</summary><p><b>W / S</b> accelerate and brake · <b>A / D</b> steer<br><b>Space</b> cruise · <b>R</b> restart · <b>F</b> centre view<br><b>V</b> free camera · <b>Q / E</b> down / up · <b>Shift</b> faster<br><b>Mouse</b> look · <b>Wheel</b> zoom · <b>Esc</b> release mouse</p><label class="select-row">Graphics <select id="quality"><option value="high">High · ambient occlusion</option><option value="balanced" selected>Balanced · faster</option></select></label><p class="accuracy">Reconstructed from your street references. Terrain, distances and unseen buildings are inferred; this is not an exact digital survey.</p><p id="asset-status"></p><p><a href="https://polyhaven.com" target="_blank" rel="noopener">Powered by Poly Haven</a> · CC0 photographic materials</p><output id="diagnostics" hidden></output></details>
+</header>
+<div id="look-hint">Click the scene to look around</div><div id="reticle" aria-hidden="true"></div>
+<footer>
+  <div class="dashboard panel"><div class="speed"><strong id="speed">0</strong><span>km/h</span></div><div class="route-info"><span id="segment">North entrance</span><small id="distance">0 / 1,500 m</small><div class="track"><i id="route-progress"></i></div></div><span id="fps"></span></div>
+  <div class="touch-controls panel"><button data-key="KeyA" aria-label="Steer left">←</button><button data-key="KeyS">Brake</button><button data-key="KeyW">Go</button><button data-key="KeyD" aria-label="Steer right">→</button></div>
+</footer>
+<section id="garage" role="dialog" aria-modal="true" aria-labelledby="garage-title" hidden>
+ <div class="garage-card panel">
+ <div class="eyebrow">AUSHIGER · YOUR NEXT DRIVE</div>
+ <h2 id="garage-title">Choose your ride.</h2>
+ <p class="garage-intro">From the northern hill to the village, with the Caucasus on the horizon.</p>
+ <div id="car-preview" aria-label="Rotating 3D car preview"><img id="car-preview-fallback" src="cars/lada-21074.jpg" alt="Lada 21074"><span id="preview-label">LADA 21074 · 3D VIEW</span></div>
+ <div id="car-list" aria-label="Available cars"></div>
+ <div class="car-import">
+ <h3>Add another car</h3>
+ <p>Select its GLB file, or the complete GLTF folder with textures. Cars stay in this browser and are not uploaded.</p>
+ <div class="import-actions"><label class="file-button">Choose .glb / .gltf<input id="car-file" type="file" accept=".glb,.gltf,.bin,.png,.jpg,.jpeg,.webp" multiple></label><label class="file-button">Choose model folder<input id="car-folder" type="file" webkitdirectory multiple></label></div>
+ </div>
+ <fieldset id="seat-controls" hidden><legend>Driver’s seat</legend>
+ <label>Front direction<select id="car-facing"><option value="0">Original</option><option value="3.141592653589793">Turn 180°</option></select></label>
+ <label>Seat height<input id="seat-height" type="range" min="0.55" max="1.25" step="0.01" value="0.82"></label>
+ <label>Seat forward / back<input id="seat-forward" type="range" min="-0.4" max="0.35" step="0.01" value="-0.08"></label>
+ <p>If the hood is behind you, turn the car 180°. Adjust the seat if the dashboard blocks the view.</p></fieldset>
+ <p id="garage-message" role="status">Loading your Lada 21074…</p>
+ <button id="begin-drive" class="primary">Drive Lada 21074</button>
+ <p class="garage-controls">W / S drive · A / D steer · Mouse look · Space cruise</p>
+ </div></section>
+<div id="load"><div class="loading-card"><div class="eyebrow">AUSHIGER · NORTH TO SOUTH</div><h2>A road into the Caucasus.</h2><p id="progress">Preparing your drive</p><div class="loading-track"><i id="loadbar"></i></div><button id="retry" hidden>Reload</button></div></div>
+<script type="module">
+import('./app-v3.js?v=9').catch(error=>{
+  console.error(error);
+  const progress=document.querySelector('#progress');
+  if(progress)progress.textContent='Unable to start: '+error.message;
+  const retry=document.querySelector('#retry');
+  if(retry){retry.hidden=false;retry.onclick=()=>location.reload();}
+});
+</script>
+</body></html>
