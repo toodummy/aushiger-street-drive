@@ -113,5 +113,5 @@ export function createGarage(scene,onPause,onStart){
   local.applyAxisAngle(new THREE.Vector3(0,1,0),yaw);return local.applyQuaternion(rotation).add(position);
  }
  
- drawList();show();choose(builtins[0].id);return {get debugNodes(){const list=[];loaded?.root.traverse(o=>{if(o.name)list.push(o.name);});return list;},get isOpen(){return open;},get hasCar(){return !!loaded;},show,sync,eye};
+ drawList();show();choose(builtins[0].id);return {get isOpen(){return open;},get hasCar(){return !!loaded;},show,sync,eye};
 }
