@@ -53,7 +53,7 @@ export function createGarage(scene,onPause,onStart){
   previewRenderer.toneMapping=THREE.ACESFilmicToneMapping;
   previewBox.prepend(previewRenderer.domElement);
   previewScene=new THREE.Scene();previewCamera=new THREE.PerspectiveCamera(34,1,.1,100);
-  previewCamera.position.set(6.7,3.4,7.3);previewCamera.lookAt(0,.65,0);
+  previewCamera.position.set(5.4,2.7,6.0);previewCamera.lookAt(0,.65,0);
   previewScene.add(new THREE.HemisphereLight(0xe9f5ff,0x617462,2.1));
   const keyLight=new THREE.DirectionalLight(0xfff6df,3);keyLight.position.set(5,8,5);previewScene.add(keyLight);
   const rim=new THREE.DirectionalLight(0xb9dfff,2);rim.position.set(-5,3,-4);previewScene.add(rim);
@@ -91,13 +91,13 @@ export function createGarage(scene,onPause,onStart){
   }catch(e){selected=null;dispose(loaded?.root);vehicle.clear();loaded=null;$('#seat-controls').hidden=true;message(e.message);}
   finally{busy=false;$('#begin-drive').disabled=false;drawList();updatePreview();startPreview();}
  }
- function drawList(){const list=$('#car-list');list.replaceChildren();for(const item of [{id:null,name:'Explore without a car'},...items]){const b=document.createElement('button');b.type='button';b.className='car-card'+(item.id===selected?' selected':'');b.disabled=busy;if(item.thumbnail){const img=document.createElement('img');img.src=item.thumbnail;img.alt=item.name;img.width=160;img.height=90;b.append(img);}const label=document.createElement('span');label.textContent=item.name;b.append(label);b.setAttribute('aria-pressed',String(item.id===selected));b.onclick=()=>choose(item.id);list.append(b);}$('#begin-drive').textContent=loaded?'Drive '+loaded.name:'Explore the street';}
+ function drawList(){const list=$('#car-list');list.replaceChildren();for(const item of items){const b=document.createElement('button');b.type='button';b.className='car-card'+(item.id===selected?' selected':'');b.disabled=busy;const label=document.createElement('span');label.textContent=item.name;b.append(label);b.setAttribute('aria-pressed',String(item.id===selected));b.onclick=()=>choose(item.id);list.append(b);}$('#begin-drive').textContent=loaded?'DRIVE '+loaded.name.toUpperCase()+'  →':'LOADING CAR…';const counter=document.querySelector('.selection-label span');if(counter)counter.textContent=String(Math.max(0,items.findIndex(i=>i.id===selected))+1).padStart(2,'0')+' / '+String(items.length).padStart(2,'0');}
  async function importFiles(files){if(busy||!files.length)return;const list=Array.from(files);if(!list.some(f=>/\.(glb|gltf)$/i.test(f.name))){message('No GLB or GLTF found. Upload the model here or send its ZIP in chat for conversion.');return;}const id=crypto.randomUUID(),main=list.find(f=>/\.(glb|gltf)$/i.test(f.name));const item={id,name:main.name.replace(/\.(glb|gltf)$/i,''),files:list};items.push(item);await choose(id);if(selected===id){try{await records('put',item);}catch{message('Car loaded for this session. Your browser could not save it; select it again next time.');}}else items=items.filter(i=>i.id!==id);drawList();}
- $('#car-file').onchange=e=>importFiles(e.target.files);$('#car-folder').onchange=e=>importFiles(e.target.files);
+ 
  $('#open-garage').onclick=()=>show();$('#begin-drive').onclick=()=>{if(busy)return;open=false;$('#garage').hidden=true;document.body.classList.remove('garage-open');onStart();};
  function show(){open=true;onPause();document.exitPointerLock?.();document.body.classList.remove('minimal');$('#garage').hidden=false;document.body.classList.add('garage-open');drawList();startPreview();}
  function sync(p,q,free){position.copy(p);rotation.copy(q);vehicle.position.copy(p);vehicle.quaternion.copy(q);vehicle.visible=!!loaded&&!free;}
  function eye(){return loaded?seat.clone().applyQuaternion(rotation).add(position):position.clone().add(new THREE.Vector3(0,1.72,0));}
- records('getAll').then(saved=>{items=[...builtins,...saved];drawList();}).catch(()=>{});
+ 
  drawList();show();choose(builtins[0].id);return {get isOpen(){return open;},get hasCar(){return !!loaded;},show,sync,eye};
 }
