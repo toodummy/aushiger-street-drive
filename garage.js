@@ -1,4 +1,4 @@
-import {makeCockpit} from './cockpit.js?v=3';
+import {makeCockpit} from './cockpit.js?v=4';
 import * as THREE from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 const $=s=>document.querySelector(s);
@@ -100,12 +100,12 @@ export function createGarage(scene,onPause,onStart){
  async function importFiles(files){if(busy||!files.length)return;const list=Array.from(files);if(!list.some(f=>/\.(glb|gltf)$/i.test(f.name))){message('No GLB or GLTF found. Upload the model here or send its ZIP in chat for conversion.');return;}const id=crypto.randomUUID(),main=list.find(f=>/\.(glb|gltf)$/i.test(f.name));const item={id,name:main.name.replace(/\.(glb|gltf)$/i,''),files:list};items.push(item);await choose(id);if(selected===id){try{await records('put',item);}catch{message('Car loaded for this session. Your browser could not save it; select it again next time.');}}else items=items.filter(i=>i.id!==id);drawList();}
  
  $('#open-garage').onclick=()=>show();$('#begin-drive').onclick=()=>{if(busy)return;open=false;$('#garage').hidden=true;document.body.classList.remove('garage-open');onStart();};
- function show(){open=true;if(loaded){loaded.root.visible=true;loaded.root.traverse(o=>{if(/steer/i.test(o.name)||(selected==='lada-2106-v1'&&/^(Body_Cabin|Glass_.*|Dash)(?:_\d+)?$/.test(o.name)))o.visible=true;});}onPause();document.exitPointerLock?.();document.body.classList.remove('minimal');$('#garage').hidden=false;document.body.classList.add('garage-open');drawList();startPreview();}
+ function show(){open=true;if(loaded){loaded.root.visible=true;loaded.root.traverse(o=>{if(/steer/i.test(o.name)||(selected==='lada-2106-v1'&&/^(Body_Cabin|Body_Lower|Glass_.*|Dash)(?:_\d+)?$/.test(o.name)))o.visible=true;});}onPause();document.exitPointerLock?.();document.body.classList.remove('minimal');$('#garage').hidden=false;document.body.classList.add('garage-open');drawList();startPreview();}
  function sync(p,q,free){position.copy(p);rotation.copy(q);vehicle.position.copy(p);vehicle.quaternion.copy(q);vehicle.visible=!!loaded&&!free;}
  function eye(view='interior'){
   const interior=view==='interior'&&!open;
   if(cockpit)cockpit.visible=interior;
-  if(loaded){loaded.root.visible=true;loaded.root.traverse(o=>{if(/steer/i.test(o.name)||(selected==='lada-2106-v1'&&/^(Body_Cabin|Glass_.*|Dash)(?:_\d+)?$/.test(o.name)))o.visible=!interior;});}
+  if(loaded){loaded.root.visible=true;loaded.root.traverse(o=>{if(/steer/i.test(o.name)||(selected==='lada-2106-v1'&&/^(Body_Cabin|Body_Lower|Glass_.*|Dash)(?:_\d+)?$/.test(o.name)))o.visible=!interior;});}
   if(!loaded){const fallback=view==='outside'?new THREE.Vector3(0,3.1,7):new THREE.Vector3(0,1.72,0);return fallback.applyQuaternion(rotation).add(position);}
   if(view==='interior')return seat.clone().applyQuaternion(rotation).add(position);
   const yaw=settings.get(selected)?.yaw||0;
