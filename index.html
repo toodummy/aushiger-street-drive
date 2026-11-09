@@ -42,7 +42,7 @@
  <div class="showroom-top"><div class="showroom-brand"><span class="game-name" aria-label="Go To Aushiger VII"><span aria-hidden="true"><b>G</b>o <b>T</b>o <b>A</b>ushiger <b>VII</b></span></span></div><div class="showroom-tag">THE CAUCASUS · 43° N</div></div><div class="showroom-copy">
  <h2 id="garage-title">Choose your ride.</h2>
  </div>
- <div id="car-preview" aria-label="Rotating 3D car preview"><img id="car-preview-fallback" src="cars/lada-21074.jpg" alt="Lada 2107"><span id="preview-label">DRAG TO ROTATE</span></div>
+ <div id="car-preview" aria-label="Rotating 3D car preview"><img id="car-preview-fallback" src="cars/lada-21074.jpg" alt="Lada 2107" hidden><span id="preview-label">DRAG TO ROTATE</span></div>
  <div class="driver-picker"><span>PICK YOUR DRIVER</span><button type="button" class="driver-choice" aria-pressed="true" aria-label="Ruslan Mukhadinovich, selected driver"><img src="ruslan.png?v=2" alt="Ruslan Mukhadinovich"><strong>Ruslan Mukhadinovich</strong><small>✓ SELECTED</small></button></div>
  <div class="showroom-bottom"><div class="selection-label">SELECT YOUR CAR <span>01 / 02</span></div><div id="car-list" aria-label="Available cars"></div>
  <fieldset id="seat-controls" hidden><legend>Driver’s seat</legend>
@@ -56,7 +56,7 @@
  </div></section>
 <div id="load"><div class="loading-card"><div class="eyebrow">Go To Aushiger VII</div><h2>Go To Aushiger VII</h2><p id="progress">Preparing your drive</p><div class="loading-track"><i id="loadbar"></i></div><button id="retry" hidden>Reload</button></div></div>
 <script type="module">
-import('./app-v3.js?v=34').catch(error=>{
+import('./app-v3.js?v=35').catch(error=>{
   console.error(error);
   const progress=document.querySelector('#progress');
   if(progress)progress.textContent='Unable to start: '+error.message;

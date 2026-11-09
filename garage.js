@@ -3,8 +3,8 @@ import * as THREE from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 const $=s=>document.querySelector(s);
 const key='aushiger-local-cars';
-const builtins=[{id:'lada-2106-v1',name:'Lada 2106',url:'./cars/lada-2106.glb?v=5',seat:{yaw:0,height:.90,forward:.02}},{id:'lada-21074-v1',name:'Lada 2107',url:'./cars/lada-21074.glb',thumbnail:'./cars/lada-21074.jpg',seat:{yaw:0,height:.90,forward:.02}},{id:'lada-kalina-v1',name:'Lada Kalina',url:'./cars/lada-kalina.glb',thumbnail:'./cars/lada-kalina.jpg',seat:{yaw:0,height:.86,forward:0}},{id:'vw-polo-2017',name:'Volkswagen Polo',parts:19,seat:{yaw:0,height:.88,forward:0}}];
-async function carFiles(item){if(item.files)return item.files;if(item.parts){const chunks=await Promise.all(Array.from({length:item.parts},async(_,i)=>{const r=await fetch(`./cars/vw-polo.part${i}.bin`);if(!r.ok)throw new Error('Could not load the Volkswagen Polo.');return r.arrayBuffer();}));return [new File(chunks,item.id+'.glb')];}const r=await fetch(item.url);if(!r.ok)throw new Error('Could not load the Lada. Reload the page to try again.');return [new File([await r.arrayBuffer()],item.id+'.glb')];}
+const builtins=[{id:'lada-2106-v1',name:'Lada 2106',url:'./cars/lada-2106.glb?v=5',seat:{yaw:0,height:.90,forward:.02}},{id:'lada-21074-v1',name:'Lada 2107',url:'./cars/lada-21074.glb',thumbnail:'./cars/lada-21074.jpg',seat:{yaw:0,height:.90,forward:.02}},{id:'lada-kalina-v1',name:'Lada Kalina',url:'./cars/lada-kalina.glb',thumbnail:'./cars/lada-kalina.jpg',seat:{yaw:0,height:.86,forward:0}},{id:'vw-polo-2017',name:'Volkswagen Polo',url:'./cars/vw-polo.glb?v=2',seat:{yaw:0,height:.88,forward:0}}];
+async function carFiles(item){if(item.files)return item.files;const r=await fetch(item.url);if(!r.ok)throw new Error('Could not load the Lada. Reload the page to try again.');return [new File([await r.arrayBuffer()],item.id+'.glb')];}
 function database(){return new Promise((resolve,reject)=>{const r=indexedDB.open(key,1);r.onupgradeneeded=()=>r.result.createObjectStore('cars',{keyPath:'id'});r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);});}
 async function records(action,value){const db=await database();try{return await new Promise((resolve,reject)=>{const tx=db.transaction('cars',action==='getAll'?'readonly':'readwrite');const r=tx.objectStore('cars')[action](value);let result;r.onsuccess=()=>result=r.result;tx.oncomplete=()=>resolve(result);tx.onerror=()=>reject(tx.error);});}finally{db.close();}}
 function dispose(root){root?.traverse(o=>{o.geometry?.dispose();for(const m of [o.material].flat().filter(Boolean)){for(const v of Object.values(m))if(v?.isTexture)v.dispose();m.dispose();}});}
@@ -28,7 +28,7 @@ export async function loadCar(files){
   }
   const manager=new THREE.LoadingManager();manager.setURLModifier(url=>{if(url.startsWith('data:')||url.startsWith('blob:'))return url;throw new Error('The car references an external asset. Include all textures in the folder.');});
   const gltf=await new GLTFLoader(manager).parseAsync(data,'');
-  if(main.name==='vw-polo-2017.glb'){for(const name of ['Ground','ArchCut_FL','ArchCut_FR','ArchCut_RL','ArchCut_RR']){const helper=gltf.scene.getObjectByName(name);if(helper)helper.removeFromParent();}}
+  if(main.name==='vw-polo-2017.glb'){for(const name of ['Ground','ArchCut_FL','ArchCut_FR','ArchCut_RL','ArchCut_RR']){const helper=gltf.scene.getObjectByName(name);if(helper)helper.removeFromParent();}gltf.scene.traverse(o=>{for(const m of [o.material].flat().filter(Boolean))m.side=THREE.FrontSide;});}
   const wrapper=new THREE.Group();wrapper.add(gltf.scene);wrapper.name='Selected vehicle';
   let bounds=new THREE.Box3().setFromObject(wrapper),size=bounds.getSize(new THREE.Vector3());
   if(size.x>size.z){gltf.scene.rotation.y+=Math.PI/2;wrapper.updateMatrixWorld(true);bounds.setFromObject(wrapper);size=bounds.getSize(new THREE.Vector3());}
@@ -112,12 +112,12 @@ export function createGarage(scene,onPause,onStart){
  async function importFiles(files){if(busy||!files.length)return;const list=Array.from(files);if(!list.some(f=>/\.(glb|gltf)$/i.test(f.name))){message('No GLB or GLTF found. Upload the model here or send its ZIP in chat for conversion.');return;}const id=crypto.randomUUID(),main=list.find(f=>/\.(glb|gltf)$/i.test(f.name));const item={id,name:main.name.replace(/\.(glb|gltf)$/i,''),files:list};items.push(item);await choose(id);if(selected===id){try{await records('put',item);}catch{message('Car loaded for this session. Your browser could not save it; select it again next time.');}}else items=items.filter(i=>i.id!==id);drawList();}
  
  $('#open-garage').onclick=()=>show();$('#begin-drive').onclick=()=>{if(busy)return;open=false;$('#garage').hidden=true;document.body.classList.remove('garage-open');onStart();};
- function show(){open=true;if(loaded){loaded.root.visible=true;loaded.root.traverse(o=>{if(/steer/i.test(o.name)||(selected==='lada-2106-v1'&&/^(Body_Cabin|Body_Lower|Glass_.*|DripRail.*|Dash)(?:_\d+)?$/.test(o.name)))o.visible=true;});}onPause();document.exitPointerLock?.();document.body.classList.remove('minimal');$('#garage').hidden=false;document.body.classList.add('garage-open');drawList();startPreview();}
+ function show(){open=true;if(loaded){loaded.root.visible=true;loaded.root.traverse(o=>{if(/steer/i.test(o.name)||(selected==='lada-2106-v1'&&/^(Body_Cabin|Body_Lower|Glass_.*|DripRail.*|Dash)(?:_\d+)?$/.test(o.name))||(selected==='vw-polo-2017'&&/^(Glass_|Windscreen|Rear_Screen|Window_Frame)/.test(o.name)))o.visible=true;});}onPause();document.exitPointerLock?.();document.body.classList.remove('minimal');$('#garage').hidden=false;document.body.classList.add('garage-open');drawList();startPreview();}
  function sync(p,q,free){position.copy(p);rotation.copy(q);vehicle.position.copy(p);vehicle.quaternion.copy(q);vehicle.visible=!!loaded&&!free;}
  function eye(view='interior'){
   const interior=view==='interior'&&!open;
   if(cockpit)cockpit.visible=interior;
-  if(loaded){loaded.root.visible=true;loaded.root.traverse(o=>{if(/steer/i.test(o.name)||(selected==='lada-2106-v1'&&/^(Body_Cabin|Body_Lower|Glass_.*|DripRail.*|Dash)(?:_\d+)?$/.test(o.name)))o.visible=!interior;});}
+  if(loaded){loaded.root.visible=true;loaded.root.traverse(o=>{if(/steer/i.test(o.name)||(selected==='lada-2106-v1'&&/^(Body_Cabin|Body_Lower|Glass_.*|DripRail.*|Dash)(?:_\d+)?$/.test(o.name))||(selected==='vw-polo-2017'&&/^(Glass_|Windscreen|Rear_Screen|Window_Frame)/.test(o.name)))o.visible=!interior;});}
   if(!loaded){const fallback=view==='outside'?new THREE.Vector3(0,3.1,7):new THREE.Vector3(0,1.72,0);return fallback.applyQuaternion(rotation).add(position);}
   if(view==='interior')return seat.clone().applyQuaternion(rotation).add(position);
   const yaw=settings.get(selected)?.yaw||0;
