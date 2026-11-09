@@ -28,6 +28,7 @@ export async function loadCar(files){
   }
   const manager=new THREE.LoadingManager();manager.setURLModifier(url=>{if(url.startsWith('data:')||url.startsWith('blob:'))return url;throw new Error('The car references an external asset. Include all textures in the folder.');});
   const gltf=await new GLTFLoader(manager).parseAsync(data,'');
+  if(main.name==='vw-polo-2017.glb'){const ground=gltf.scene.getObjectByName('Ground');if(ground)ground.removeFromParent();}
   const wrapper=new THREE.Group();wrapper.add(gltf.scene);wrapper.name='Selected vehicle';
   let bounds=new THREE.Box3().setFromObject(wrapper),size=bounds.getSize(new THREE.Vector3());
   if(size.x>size.z){gltf.scene.rotation.y+=Math.PI/2;wrapper.updateMatrixWorld(true);bounds.setFromObject(wrapper);size=bounds.getSize(new THREE.Vector3());}
