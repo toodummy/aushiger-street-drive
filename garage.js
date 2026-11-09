@@ -1,4 +1,4 @@
-import {makeCockpit} from './cockpit.js?v=7';
+import {makeCockpit} from './cockpit.js?v=8';
 import * as THREE from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 const $=s=>document.querySelector(s);
