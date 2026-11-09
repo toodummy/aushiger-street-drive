@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="description" content="Explore a reference-based reconstruction of the north entrance and main street of Aushiger. Drive south or explore with a free camera.">
-<title>Aushiger · Street Drive</title>
+<title>Go To Aushiger VII</title>
 <link rel="stylesheet" href="style.css?v=12">
 <script type="importmap">{"imports":{"three":"./vendor/three/build/three.module.js","three/addons/":"./vendor/three/examples/jsm/"}}</script>
 <style>
@@ -13,7 +13,7 @@
 <body>
 <header class="panel">
   <div class="eyebrow"><span class="live-dot"></span> CAUCASUS · SPRING <span id="mode-label">SOUTHBOUND</span></div>
-  <div class="title-row"><h1>Aushiger</h1><button id="hide-ui" class="icon-button" title="Hide controls (H)" aria-label="Hide controls">−</button></div>
+  <div class="title-row"><h1 style="font-size:clamp(20px,2.1vw,27px);letter-spacing:-.6px">Go To Aushiger VII</h1><button id="hide-ui" class="icon-button" title="Hide controls (H)" aria-label="Hide controls">−</button></div>
   <p class="subtitle">The northern descent</p>
   <div class="view-heading">CAMERA VIEW</div><div class="camera-views" role="group" aria-label="Driving camera view"><button data-view="interior" aria-pressed="true">Interior</button><button data-view="hood" aria-pressed="false">Hood</button><button data-view="outside" aria-pressed="false">Outside</button></div><div class="actions"><button id="cruise" class="primary" aria-pressed="false">Start cruise</button><button id="mode" aria-pressed="false">Free camera</button></div>
   <button id="open-garage" class="garage-link">Choose car / Driver’s seat</button><div class="secondary"><button id="reset">Restart</button><button id="center">Centre view</button></div>
@@ -27,7 +27,7 @@
 </footer>
 <section id="garage" role="dialog" aria-modal="true" aria-labelledby="garage-title" hidden>
  <div class="garage-card">
- <div class="showroom-top"><div class="showroom-brand">AUSHIGER <span>STREET DRIVE</span></div><div class="showroom-tag">THE CAUCASUS · 43° N</div></div><div class="showroom-copy"><div class="eyebrow">THE ROAD IS WAITING</div>
+ <div class="showroom-top"><div class="showroom-brand" style="letter-spacing:.08em">Go To Aushiger VII</div><div class="showroom-tag">THE CAUCASUS · 43° N</div></div><div class="showroom-copy"><div class="eyebrow">THE ROAD IS WAITING</div>
  <h2 id="garage-title">Choose your ride.</h2>
  <p class="garage-intro">Choose your car and take the road through Aushiger.</p></div>
  <div id="car-preview" aria-label="Rotating 3D car preview"><img id="car-preview-fallback" src="cars/lada-21074.jpg" alt="Lada 21074"><span id="preview-label">DRAG TO ROTATE</span></div>
@@ -42,7 +42,7 @@
  <button id="begin-drive" class="primary">Drive Lada 21074</button>
  <p class="garage-controls">W / S DRIVE <span>·</span> A / D STEER <span>·</span> MOUSE LOOK</p></div>
  </div></section>
-<div id="load"><div class="loading-card"><div class="eyebrow">AUSHIGER · NORTH TO SOUTH</div><h2>A road into the Caucasus.</h2><p id="progress">Preparing your drive</p><div class="loading-track"><i id="loadbar"></i></div><button id="retry" hidden>Reload</button></div></div>
+<div id="load"><div class="loading-card"><div class="eyebrow">Go To Aushiger VII</div><h2>A road into the Caucasus.</h2><p id="progress">Preparing your drive</p><div class="loading-track"><i id="loadbar"></i></div><button id="retry" hidden>Reload</button></div></div>
 <script type="module">
 import('./app-v3.js?v=28').catch(error=>{
   console.error(error);
