@@ -4,7 +4,7 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="description" content="Explore a reference-based reconstruction of the north entrance and main street of Aushiger. Drive south or explore with a free camera.">
 <title>Go To Aushiger VII</title>
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=Cormorant+Garamond:ital,wght@1,500;1,600&display=swap">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=Cormorant+Garamond:ital,wght@1,500;1,600&family=Marcellus+SC&display=swap">
 <link rel="stylesheet" href="style.css?v=13">
 <script type="importmap">{"imports":{"three":"./vendor/three/build/three.module.js","three/addons/":"./vendor/three/examples/jsm/"}}</script>
 <style>
@@ -31,18 +31,57 @@
 .load-title b.num{font-size:clamp(30px,5.6vw,50px);margin-left:6px;letter-spacing:.04em}
 @keyframes titleShine{from{background-position:0% 50%}to{background-position:100% 50%}}
 @media(prefers-reduced-motion:reduce){.load-title b,.load-title i{animation:none}}
+
+/* ===== shared game title: decorative capitals + tiny italic letters, gold gradient ===== */
+.game-name>span{background:linear-gradient(100deg,#fff1c8 0%,#e8c46e 30%,#d98a4e 58%,#f3d79a 100%);-webkit-background-clip:text;background-clip:text;color:transparent;font-family:"Cormorant Garamond",Georgia,serif;font-style:italic;font-weight:600;letter-spacing:.08em;display:inline-block!important}
+.game-name b{font-family:"Cinzel Decorative","Cinzel",Georgia,serif;font-style:normal;font-weight:900;letter-spacing:-.02em}
+/* "Aushiger City" — icy teal, small caps, flanked by thin gold rules */
+.city-name{display:flex!important;align-items:center;gap:.7em;font-family:"Marcellus SC","Cinzel",Georgia,serif;font-weight:400;font-style:normal;text-transform:uppercase;letter-spacing:.42em;line-height:1;background:linear-gradient(90deg,#9fe3d6,#e8fbff 50%,#7cc7e6);-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:none;filter:drop-shadow(0 2px 10px #5fd0c455)}
+.city-name:before,.city-name:after{content:"";height:1px;flex:0 0 2.2em;background:linear-gradient(90deg,transparent,#e2c48a)}
+.city-name:after{background:linear-gradient(90deg,#e2c48a,transparent)}
+.load-city{margin:-14px 0 22px}.load-city .city-name{font-size:clamp(11px,2.2vw,15px)}
+
+/* showroom header: title fits any screen, city line under it, tag under that */
+.showroom-top{flex-direction:column;align-items:flex-start;gap:10px}
+.showroom-brand{letter-spacing:0;max-width:100%}
+.showroom-brand .game-name{font-size:clamp(4px,.62vw,9px);letter-spacing:0;color:inherit;margin:0}
+.showroom-brand .city-name{font-size:clamp(10px,1.1vw,14px);margin-top:12px;color:transparent}
+.showroom-tag{letter-spacing:.3em}
+@media(max-width:700px){.showroom-top{top:18px;gap:6px}.showroom-brand .game-name{font-size:calc((100vw - 12vw) / 76)}.showroom-brand .city-name{font-size:11px;margin-top:8px;letter-spacing:.36em}.showroom-tag{display:none}.showroom-copy{top:max(150px,19%)}.garage-card h2{font-size:32px}}
+
+.showroom-brand .game-name>span{font-size:inherit;margin:0;letter-spacing:.08em;color:transparent}
+/* ===== in-game menu: floating show/hide button ===== */
+#menu-toggle{position:fixed;z-index:4;top:22px;right:22px;display:flex;align-items:center;gap:7px;padding:9px 14px;border-radius:999px;background:linear-gradient(135deg,#182325ee,#182325cc);border:1px solid #d8c49166;color:#f3dfa6;font-size:12px;font-weight:700;letter-spacing:.08em;backdrop-filter:blur(10px);box-shadow:0 6px 20px #0006}
+#menu-toggle:hover{background:#26332f}
+#menu-toggle .mt-icon{font-size:13px;line-height:1}
+.garage-open #menu-toggle{display:none}
+.menu-hidden header{display:none}
+.menu-hidden #menu-toggle{background:#d8c491;color:#1b2420;border-color:#d8c491}
+.hud-game-name .game-name{font-size:3.6px}
+.title-row{min-width:0}
+@media(max-width:650px){
+ #menu-toggle{top:12px;right:12px;padding:8px 12px;font-size:11px}
+ header{width:min(270px,calc(100vw - 120px));padding:12px 12px 10px;max-height:calc(100dvh - 120px);border-radius:14px}
+ .hud-game-name{margin-top:4px}.hud-game-name .game-name{font-size:2.5px}
+ h1{margin-top:6px}.subtitle{font-size:11px;margin:2px 0 8px}
+ .view-heading{display:none}.camera-views{margin-bottom:7px}.camera-views button{padding:7px 2px}
+ header button{padding:8px 9px;font-size:11px}.garage-link{margin-top:6px}.secondary{margin:6px 0 8px;gap:6px}.secondary button{padding:7px}
+ details{margin-top:8px;padding-top:8px}
+}
+@media(max-height:500px){header{max-height:calc(100dvh - 90px)}}
 </style>
 </head>
 <body>
-<header class="panel">
+<header class="panel" id="hud-menu">
   <div class="eyebrow"><span class="live-dot"></span> CAUCASUS · SPRING <span id="mode-label">SOUTHBOUND</span></div>
-  <div class="title-row"><h1 class="hud-game-name"><span class="game-name" aria-label="Go To Aushiger VII"><span aria-hidden="true"><b>G</b>o <b>T</b>o <b>A</b>ushiger <b>VII</b></span></span></h1><button id="hide-ui" class="icon-button" title="Hide controls (H)" aria-label="Hide controls">−</button></div>
+  <div class="title-row"><h1 class="hud-game-name"><span class="game-name" aria-label="Go To Aushiger VII"><span aria-hidden="true"><b>G</b>o <b>T</b>o <b>A</b>ushiger <b>VII</b></span></span></h1></div>
   <p class="subtitle">The northern descent</p>
   <div class="view-heading">CAMERA VIEW</div><div class="camera-views" role="group" aria-label="Driving camera view"><button data-view="interior" aria-pressed="true">Interior</button><button data-view="hood" aria-pressed="false">Hood</button><button data-view="outside" aria-pressed="false">Outside</button></div><div class="actions"><button id="cruise" class="primary" aria-pressed="false">Start cruise</button><button id="mode" aria-pressed="false">Free camera</button></div>
   <button id="open-garage" class="garage-link">Choose car / Driver’s seat</button><div class="secondary"><button id="reset">Restart</button><button id="center">Centre view</button></div>
   <label class="select-row">Jump to <select id="location" aria-label="Route location"><option value="0">North entrance</option><option value="340">Hillside descent</option><option value="620">Village entrance</option><option value="745">Village compounds</option><option value="945">Bus stop & crossing</option><option value="1110">Village street</option></select></label>
   <details id="about"><summary>Controls & scene details</summary><p><b>W / S</b> accelerate and brake · <b>A / D</b> steer<br><b>Space</b> cruise · <b>R</b> restart · <b>F</b> centre view<br><b>V</b> free camera · <b>Q / E</b> down / up · <b>Shift</b> faster<br><b>Mouse</b> look · <b>Wheel</b> zoom · <b>Esc</b> release mouse</p><label class="select-row">Graphics <select id="quality"><option value="high">High · ambient occlusion</option><option value="balanced" selected>Balanced · faster</option></select></label><p class="accuracy">Reconstructed from your street references. Terrain, distances and unseen buildings are inferred; this is not an exact digital survey.</p><p id="asset-status"></p><p><a href="https://polyhaven.com" target="_blank" rel="noopener">Powered by Poly Haven</a> · CC0 photographic materials</p><output id="diagnostics" hidden></output></details>
 </header>
+<button id="menu-toggle" type="button" aria-controls="hud-menu" aria-expanded="true" title="Hide menu (M)"><span class="mt-icon" aria-hidden="true">✕</span><span class="mt-text">Hide</span></button>
 <div id="look-hint">Click the scene to look around</div><div id="reticle" aria-hidden="true"></div>
 <footer>
   <div class="dashboard panel"><div class="speed"><strong id="speed">0</strong><span>km/h</span></div><div class="route-info"><span id="segment">North entrance</span><small id="distance">0 / 1,500 m</small><div class="track"><i id="route-progress"></i></div></div><span id="fps"></span></div>
@@ -50,7 +89,7 @@
 </footer>
 <section id="garage" role="dialog" aria-modal="true" aria-labelledby="garage-title" hidden>
  <div class="garage-card">
- <div class="showroom-top"><div class="showroom-brand"><span class="game-name" aria-label="Go To Aushiger VII"><span aria-hidden="true"><b>G</b>o <b>T</b>o <b>A</b>ushiger <b>VII</b></span></span></div><div class="showroom-tag">THE CAUCASUS · 43° N</div></div><div class="showroom-copy">
+ <div class="showroom-top"><div class="showroom-brand"><span class="game-name" aria-label="Go To Aushiger VII"><span aria-hidden="true"><b>G</b>o <b>T</b>o <b>A</b>ushiger <b>VII</b></span></span><span class="city-name">Aushiger City</span></div><div class="showroom-tag">THE CAUCASUS · 43° N</div></div><div class="showroom-copy">
  <h2 id="garage-title">Choose your ride.</h2>
  </div>
  <div id="car-preview" aria-label="Rotating 3D car preview"><img id="car-preview-fallback" src="cars/lada-21074.jpg" alt="Lada 2107" hidden><span id="preview-label">DRAG TO ROTATE</span></div>
@@ -65,9 +104,9 @@
  <button id="begin-drive" class="primary">Drive Lada 2106</button>
  <p class="garage-controls">W / S DRIVE <span>·</span> A / D STEER <span>·</span> MOUSE LOOK</p></div>
  </div></section>
-<div id="load"><div class="loading-card"><h2 class="load-title" aria-label="Go To Aushiger VII"><span aria-hidden="true"><b>G</b><i>o</i> <b>T</b><i>o</i> <b>A</b><i>ushiger</i> <b class="num">VII</b></span></h2><p id="progress">Preparing your drive</p><div class="loading-track"><i id="loadbar"></i></div><button id="retry" hidden>Reload</button></div></div>
+<div id="load"><div class="loading-card"><h2 class="load-title" aria-label="Go To Aushiger VII"><span aria-hidden="true"><b>G</b><i>o</i> <b>T</b><i>o</i> <b>A</b><i>ushiger</i> <b class="num">VII</b></span></h2><div class="load-city"><span class="city-name">Aushiger City</span></div><p id="progress">Preparing your drive</p><div class="loading-track"><i id="loadbar"></i></div><button id="retry" hidden>Reload</button></div></div>
 <script type="module">
-import('./app-v3.js?v=37').catch(error=>{
+import('./app-v3.js?v=38').catch(error=>{
   console.error(error);
   const progress=document.querySelector('#progress');
   if(progress)progress.textContent='Unable to start: '+error.message;
@@ -76,4 +115,11 @@ import('./app-v3.js?v=37').catch(error=>{
 });
 </script>
 <!-- Deploy corrected car model and interior -->
+<script>
+/* keep the showroom title inside the screen and the "Choose your ride" text below it */
+(()=>{const fit=()=>{const g=document.getElementById('garage');if(!g||g.hidden)return;const t=document.querySelector('.showroom-brand .game-name'),top=document.querySelector('.showroom-top'),copy=document.querySelector('.showroom-copy');if(!t||!top)return;
+t.style.fontSize='';const avail=top.clientWidth;let fs=parseFloat(getComputedStyle(t).fontSize);const w=t.scrollWidth;if(w>avail)t.style.fontSize=(fs*avail/w*0.98)+'px';
+if(copy){copy.style.top='';const need=top.getBoundingClientRect().bottom+22;if(copy.getBoundingClientRect().top<need)copy.style.top=need+'px';}};
+addEventListener('resize',fit);document.fonts?.ready.then(fit);new MutationObserver(fit).observe(document.getElementById('garage'),{attributes:true,attributeFilter:['hidden']});setTimeout(fit,300);setTimeout(fit,2500);})();
+</script>
 </body></html>

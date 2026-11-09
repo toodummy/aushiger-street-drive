@@ -77,7 +77,9 @@ for(const button of document.querySelectorAll('[data-view]'))button.addEventList
 $('#cruise').onclick=toggleCruise;$('#reset').onclick=()=>reset();$('#mode').onclick=toggleFree;
 $('#center').onclick=()=>{state.yaw=state.pitch=0;};
 $('#location').onchange=e=>reset(Number(e.target.value));
-$('#hide-ui').onclick=()=>document.body.classList.toggle('minimal');
+const menuBtn=$('#menu-toggle');function setMenu(hidden){document.body.classList.toggle('menu-hidden',hidden);if(hidden)document.body.classList.remove('minimal');menuBtn.setAttribute('aria-expanded',String(!hidden));menuBtn.querySelector('.mt-icon').textContent=hidden?'☰':'✕';menuBtn.querySelector('.mt-text').textContent=hidden?'Menu':'Hide';menuBtn.title=hidden?'Show menu (M)':'Hide menu (M)';}
+menuBtn.onclick=e=>{e.stopPropagation();const b=document.body;if(b.classList.contains('minimal')){b.classList.remove('minimal');setMenu(false);}else setMenu(!b.classList.contains('menu-hidden'));menuBtn.blur();};
+setMenu(matchMedia('(max-width:650px)').matches);
 
 async function captureMouse(){
   if(!ready||garage?.isOpen||document.pointerLockElement===renderer.domElement)return;
@@ -110,7 +112,7 @@ addEventListener('keydown',e=>{
   keys.add(e.code);if(e.repeat)return;
   if(e.code==='Space')toggleCruise();if(e.code==='KeyR')reset();
   if(e.code==='KeyF'){state.yaw=state.pitch=0;}
-  if(e.code==='KeyV')toggleFree();if(e.code==='KeyH')document.body.classList.toggle('minimal');
+  if(e.code==='KeyV')toggleFree();if(e.code==='KeyH')document.body.classList.toggle('minimal');if(e.code==='KeyM')menuBtn.click();
 });
 addEventListener('keyup',e=>keys.delete(e.code));
 addEventListener('blur',()=>{keys.clear();drag=null;state.cruise=false;state.speed=0;updateControls();});
