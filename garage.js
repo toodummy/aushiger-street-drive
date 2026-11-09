@@ -1,4 +1,4 @@
-import {makeCockpit} from './cockpit.js?v=1';
+import {makeCockpit} from './cockpit.js?v=2';
 import * as THREE from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 const $=s=>document.querySelector(s);
@@ -89,7 +89,7 @@ export function createGarage(scene,onPause,onStart){
    if(!id){dispose(loaded?.root);vehicle.clear();loaded=null;$('#seat-controls').hidden=true;message('Explore the road without a vehicle.');}
    else{
     message('Loading your car and its textures…');const item=items.find(i=>i.id===id),result=await loadCar(await carFiles(item));result.name=item.name;if(item.seat&&!settings.has(id))settings.set(id,result.driverEye?{yaw:0,height:result.driverEye.y/result.size.y,forward:result.driverEye.z/result.size.z}:item.seat);
-    dispose(loaded?.root);if(cockpit)dispose(cockpit);vehicle.clear();loaded=result;vehicle.add(result.root);cockpit=makeCockpit(id==='lada-kalina-v1');vehicle.add(cockpit);
+    dispose(loaded?.root);if(cockpit)dispose(cockpit);vehicle.clear();loaded=result;vehicle.add(result.root);cockpit=makeCockpit(id==='lada-kalina-v1',id==='lada-2106-v1');vehicle.add(cockpit);
     try{const s=JSON.parse(localStorage.getItem('aushiger-seat-'+id));if(s)settings.set(id,s);}catch{}
     const s=settings.get(id)||{yaw:0,height:.82,forward:-.08};$('#car-facing').value=String(s.yaw);$('#seat-height').value=String(s.height);$('#seat-forward').value=String(s.forward);applySettings();$('#seat-controls').hidden=false;message(result.name+' selected. Start driving to view its actual hood from the driver’s seat.');
    }

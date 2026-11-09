@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 
 // Compact, model-specific cockpit detail for the driver's view.
-export function makeCockpit(isKalina) {
+export function makeCockpit(isKalina, is2106=false) {
  const root=new THREE.Group();
  const plastic=new THREE.MeshStandardMaterial({color:isKalina?0x383b3c:0x222321,roughness:.87});
  const dark=new THREE.MeshStandardMaterial({color:0x101211,roughness:.78});
@@ -43,5 +43,21 @@ export function makeCockpit(isKalina) {
  box(.39,.18,.04,.63,-.68,-.82,dark);
  if(isKalina){for(const x of [.51,.63,.75]){disk(.034,x,-.68,-.79,trim);disk(.02,x,-.68,-.78,dark)}}
  else {for(const y of [-.63,-.68,-.73]){box(.28,.008,.012,.63,y,-.79,trim);box(.025,.026,.02,.57,y,-.77,pale)}}
+ if(is2106){
+  // The source model's cabin is a solid block, so build a separate open
+  // windshield surround for the driver's camera while preserving the body.
+  const lining=new THREE.MeshStandardMaterial({color:0x252725,roughness:.9});
+  const pillar=new THREE.MeshStandardMaterial({color:0xb3ad98,roughness:.8});
+  const rubber=new THREE.MeshStandardMaterial({color:0x171b1a,roughness:.8});
+  box(2.35,.12,.95,.22,.43,-.53,lining);
+  box(2.18,.075,.09,.19,.365,-.92,rubber);
+  const left=box(.09,.98,.12,-.80,-.03,-.85,pillar);left.rotation.z=-.22;
+  const right=box(.09,.98,.12,1.13,-.03,-.85,pillar);right.rotation.z=.22;
+  const leftSeal=box(.026,.97,.14,-.74,-.03,-.855,rubber);leftSeal.rotation.z=-.22;
+  const rightSeal=box(.026,.97,.14,1.07,-.03,-.855,rubber);rightSeal.rotation.z=.22;
+  box(.10,.37,1.25,-.91,-.65,-.22,plastic);
+  box(.10,.37,1.25,1.25,-.65,-.22,plastic);
+  wheel.traverse(o=>{if(o.isMesh){o.material=o.material.clone();o.material.depthTest=false;o.material.depthWrite=false;o.renderOrder=100;}});
+ }
  return root;
 }

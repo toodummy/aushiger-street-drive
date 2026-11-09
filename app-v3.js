@@ -1,5 +1,5 @@
 import {addLandscape} from './landscape.js?v=6';
-import {createGarage} from './garage.js?v=23';
+import {createGarage} from './garage.js?v=24';
 import * as THREE from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {EffectComposer} from 'three/addons/postprocessing/EffectComposer.js';
