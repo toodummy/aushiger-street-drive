@@ -16,6 +16,10 @@
 #car-preview{left:0;right:20%;top:26%;bottom:23%}
 @media(max-width:700px){.showroom-copy{top:17%;width:75%}.garage-card .showroom-copy h2{font-size:20px}#car-preview{left:0;right:23%;top:30%;bottom:32%}}
 @media(max-height:650px) and (min-width:701px){.showroom-copy{top:22%}.garage-card .showroom-copy h2{font-size:20px}#car-preview{left:0;right:20%;top:29%;bottom:24%}}
+
+.showroom-copy{top:max(190px,26%)}
+@media(max-width:700px){.showroom-copy{top:max(145px,23%)}}
+@media(max-height:650px) and (min-width:701px){.showroom-copy{top:max(160px,27%)}}
 </style>
 </head>
 <body>
@@ -37,8 +41,8 @@
  <div class="garage-card">
  <div class="showroom-top"><div class="showroom-brand"><span class="game-name" aria-label="Go To Aushiger VII"><span aria-hidden="true"><b>G</b>o <b>T</b>o <b>A</b>ushiger <b>VII</b></span></span></div><div class="showroom-tag">THE CAUCASUS · 43° N</div></div><div class="showroom-copy">
  <h2 id="garage-title">Choose your ride.</h2>
- <p class="garage-intro">Choose your car and take the road through Aushiger.</p></div>
- <div id="car-preview" aria-label="Rotating 3D car preview"><img id="car-preview-fallback" src="cars/lada-21074.jpg" alt="Lada 21074"><span id="preview-label">DRAG TO ROTATE</span></div>
+ </div>
+ <div id="car-preview" aria-label="Rotating 3D car preview"><img id="car-preview-fallback" src="cars/lada-21074.jpg" alt="Lada 2107"><span id="preview-label">DRAG TO ROTATE</span></div>
  <div class="driver-picker"><span>PICK YOUR DRIVER</span><button type="button" class="driver-choice" aria-pressed="true" aria-label="Ruslan Mukhadinovich, selected driver"><img src="ruslan.png?v=2" alt="Ruslan Mukhadinovich"><strong>Ruslan Mukhadinovich</strong><small>✓ SELECTED</small></button></div>
  <div class="showroom-bottom"><div class="selection-label">SELECT YOUR CAR <span>01 / 02</span></div><div id="car-list" aria-label="Available cars"></div>
  <fieldset id="seat-controls" hidden><legend>Driver’s seat</legend>
@@ -46,13 +50,13 @@
  <label>Seat height<input id="seat-height" type="range" min="0.55" max="1.25" step="0.01" value="0.82"></label>
  <label>Seat forward / back<input id="seat-forward" type="range" min="-0.4" max="0.35" step="0.01" value="-0.08"></label>
  <p>If the hood is behind you, turn the car 180°. Adjust the seat if the dashboard blocks the view.</p></fieldset>
- <p id="garage-message" role="status">Loading your Lada 21074…</p>
- <button id="begin-drive" class="primary">Drive Lada 21074</button>
+ <p id="garage-message" role="status">Loading your Lada 2106…</p>
+ <button id="begin-drive" class="primary">Drive Lada 2106</button>
  <p class="garage-controls">W / S DRIVE <span>·</span> A / D STEER <span>·</span> MOUSE LOOK</p></div>
  </div></section>
-<div id="load"><div class="loading-card"><div class="eyebrow">Go To Aushiger VII</div><h2>A road into the Caucasus.</h2><p id="progress">Preparing your drive</p><div class="loading-track"><i id="loadbar"></i></div><button id="retry" hidden>Reload</button></div></div>
+<div id="load"><div class="loading-card"><div class="eyebrow">Go To Aushiger VII</div><h2>Go To Aushiger VII</h2><p id="progress">Preparing your drive</p><div class="loading-track"><i id="loadbar"></i></div><button id="retry" hidden>Reload</button></div></div>
 <script type="module">
-import('./app-v3.js?v=29').catch(error=>{
+import('./app-v3.js?v=30').catch(error=>{
   console.error(error);
   const progress=document.querySelector('#progress');
   if(progress)progress.textContent='Unable to start: '+error.message;
