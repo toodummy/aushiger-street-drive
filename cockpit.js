@@ -88,7 +88,7 @@ function make2106(){
 // Compact, model-specific cockpit detail for the driver's view.
 export function makeCockpit(isKalina, is2106=false, isPolo=false) {
  if(is2106)return make2106();
- if(isPolo)return new THREE.Group();   // the Polo carries its own modelled interior
+ if(isPolo)return new THREE.Group();   // the Polo and 2107 carry their own modelled interiors
  const root=new THREE.Group();
  const plastic=new THREE.MeshStandardMaterial({color:isKalina?0x383b3c:0x222321,roughness:.87});
  const dark=new THREE.MeshStandardMaterial({color:0x101211,roughness:.78});
