@@ -7,13 +7,14 @@
 <link rel="stylesheet" href="style.css?v=12">
 <script type="importmap">{"imports":{"three":"./vendor/three/build/three.module.js","three/addons/":"./vendor/three/examples/jsm/"}}</script>
 <style>
+.game-name{display:inline-block;white-space:nowrap;font-size:10px;font-weight:650;letter-spacing:.03em;line-height:1}.game-name b{font-size:5em;font-weight:800;line-height:1;letter-spacing:-.04em}.hud-game-name .game-name{font-size:6px;letter-spacing:0}.hud-game-name{margin-top:8px}.showroom-brand .game-name{font-size:clamp(7px,.68vw,10px)}
 .driver-picker{position:absolute;z-index:3;right:4%;top:16%;bottom:22%;width:min(250px,22vw);display:flex;flex-direction:column;align-items:center;justify-content:flex-end}.driver-picker>span{align-self:stretch;color:#d9bd80;font-size:10px;letter-spacing:.18em;margin-bottom:8px}.driver-choice{width:100%;height:100%;max-height:430px;position:relative;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;border:1px solid #d9bd8090;background:linear-gradient(180deg,#ffffff08,#081215b5);border-radius:16px;padding:8px;overflow:hidden}.driver-choice img{min-height:0;width:100%;flex:1;object-fit:contain;object-position:center bottom;filter:drop-shadow(0 8px 12px #0009)}.driver-choice strong{font-size:12px;color:#fff;margin:8px 0 4px}.driver-choice small{font-size:9px;color:#d9bd80;letter-spacing:.13em}.driver-choice:focus-visible{outline:2px solid #fff}.driver-choice[aria-pressed=true]{border-color:#ead396;box-shadow:0 0 24px #d9bd8020}@media(max-width:700px){.driver-picker{top:29%;right:4%;bottom:37%;width:25%;min-width:110px}.driver-picker>span{font-size:8px}.driver-choice{padding:4px}.driver-choice strong{font-size:10px;line-height:1.15}.driver-choice small{font-size:8px}#car-preview{right:20%}}@media(max-height:650px) and (min-width:701px){.driver-picker{top:17%;bottom:20%}}
 </style>
 </head>
 <body>
 <header class="panel">
   <div class="eyebrow"><span class="live-dot"></span> CAUCASUS · SPRING <span id="mode-label">SOUTHBOUND</span></div>
-  <div class="title-row"><h1 style="font-size:clamp(20px,2.1vw,27px);letter-spacing:-.6px">Go To Aushiger VII</h1><button id="hide-ui" class="icon-button" title="Hide controls (H)" aria-label="Hide controls">−</button></div>
+  <div class="title-row"><h1 class="hud-game-name"><span class="game-name" aria-label="Go To Aushiger VII"><span aria-hidden="true"><b>G</b>o <b>T</b>o <b>A</b>ushiger <b>VII</b></span></span></h1><button id="hide-ui" class="icon-button" title="Hide controls (H)" aria-label="Hide controls">−</button></div>
   <p class="subtitle">The northern descent</p>
   <div class="view-heading">CAMERA VIEW</div><div class="camera-views" role="group" aria-label="Driving camera view"><button data-view="interior" aria-pressed="true">Interior</button><button data-view="hood" aria-pressed="false">Hood</button><button data-view="outside" aria-pressed="false">Outside</button></div><div class="actions"><button id="cruise" class="primary" aria-pressed="false">Start cruise</button><button id="mode" aria-pressed="false">Free camera</button></div>
   <button id="open-garage" class="garage-link">Choose car / Driver’s seat</button><div class="secondary"><button id="reset">Restart</button><button id="center">Centre view</button></div>
@@ -27,7 +28,7 @@
 </footer>
 <section id="garage" role="dialog" aria-modal="true" aria-labelledby="garage-title" hidden>
  <div class="garage-card">
- <div class="showroom-top"><div class="showroom-brand" style="letter-spacing:.08em">Go To Aushiger VII</div><div class="showroom-tag">THE CAUCASUS · 43° N</div></div><div class="showroom-copy"><div class="eyebrow">THE ROAD IS WAITING</div>
+ <div class="showroom-top"><div class="showroom-brand"><span class="game-name" aria-label="Go To Aushiger VII"><span aria-hidden="true"><b>G</b>o <b>T</b>o <b>A</b>ushiger <b>VII</b></span></span></div><div class="showroom-tag">THE CAUCASUS · 43° N</div></div><div class="showroom-copy"><div class="eyebrow">THE ROAD IS WAITING</div>
  <h2 id="garage-title">Choose your ride.</h2>
  <p class="garage-intro">Choose your car and take the road through Aushiger.</p></div>
  <div id="car-preview" aria-label="Rotating 3D car preview"><img id="car-preview-fallback" src="cars/lada-21074.jpg" alt="Lada 21074"><span id="preview-label">DRAG TO ROTATE</span></div>
