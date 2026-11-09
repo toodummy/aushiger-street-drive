@@ -9,6 +9,7 @@ on:
       - '*.css'
       - '*.json'
       - '*.bin'
+      - 'ruslan.png'
       - 'cars/**'
       - 'textures/**'
       - 'vendor/**'
@@ -40,7 +41,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for file in index.html app-v3.js style.css route.json street.part0.0.bin street.part0.1.bin street.part0.2.bin street.part1.0.bin street.part1.1.bin street.part1.2.bin street.part2.bin cars/lada-21074.glb cars/lada-kalina.glb vendor/three/LICENSE; do
+          for file in index.html ruslan.png app-v3.js style.css route.json street.part0.0.bin street.part0.1.bin street.part0.2.bin street.part1.0.bin street.part1.1.bin street.part1.2.bin street.part2.bin cars/lada-21074.glb cars/lada-kalina.glb vendor/three/LICENSE; do
             test -s "$file" || { echo "Missing game file: $file"; exit 1; }
           done
           find . -name '*.js' -not -path './.git/*' -print0 | while IFS= read -r -d '' file; do
@@ -49,7 +50,7 @@ jobs:
       - name: Prepare static site
         run: |
           mkdir _site
-          cp index.html *.js *.css route.json street.part*.bin _site/
+          cp index.html ruslan.png *.js *.css route.json street.part*.bin _site/
           cp -R cars textures vendor _site/
           touch _site/.nojekyll
       - name: Configure GitHub Pages
