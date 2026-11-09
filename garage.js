@@ -54,11 +54,22 @@ export function createGarage(scene,onPause,onStart){
   previewRenderer.outputColorSpace=THREE.SRGBColorSpace;
   previewRenderer.toneMapping=THREE.ACESFilmicToneMapping;
   previewBox.prepend(previewRenderer.domElement);
-  previewScene=new THREE.Scene();previewCamera=new THREE.PerspectiveCamera(17.4,1,.1,100);
+  previewScene=new THREE.Scene();
+  // The original metallic wheels and body need something bright to reflect.
+  const studioCanvas=document.createElement('canvas');studioCanvas.width=1024;studioCanvas.height=512;
+  const studio=studioCanvas.getContext('2d');const gradient=studio.createLinearGradient(0,0,0,512);
+  gradient.addColorStop(0,'#e3e8ee');gradient.addColorStop(.45,'#a5b0ba');gradient.addColorStop(.52,'#69757c');gradient.addColorStop(1,'#353e44');
+  studio.fillStyle=gradient;studio.fillRect(0,0,1024,512);
+  studio.fillStyle='#ffffff';studio.fillRect(100,80,210,100);studio.fillRect(580,100,240,90);
+  const reflection=new THREE.CanvasTexture(studioCanvas);reflection.mapping=THREE.EquirectangularReflectionMapping;reflection.colorSpace=THREE.SRGBColorSpace;
+  previewScene.environment=reflection;if(!scene.environment)scene.environment=reflection;
+  previewRenderer.shadowMap.enabled=true;previewRenderer.shadowMap.type=THREE.PCFSoftShadowMap;
+  previewCamera=new THREE.PerspectiveCamera(17.4,1,.1,100);
   previewCamera.position.set(5.4,2.7,6.0);previewCamera.lookAt(0,.65,0);
   previewScene.add(new THREE.HemisphereLight(0xe9f5ff,0x617462,2.1));
-  const keyLight=new THREE.DirectionalLight(0xfff6df,3);keyLight.position.set(5,8,5);previewScene.add(keyLight);
+  const keyLight=new THREE.DirectionalLight(0xfff6df,3);keyLight.position.set(5,8,5);keyLight.castShadow=true;keyLight.shadow.mapSize.set(1024,1024);keyLight.shadow.camera.left=-4;keyLight.shadow.camera.right=4;keyLight.shadow.camera.top=4;keyLight.shadow.camera.bottom=-4;keyLight.shadow.bias=-0.0003;previewScene.add(keyLight);
   const rim=new THREE.DirectionalLight(0xb9dfff,2);rim.position.set(-5,3,-4);previewScene.add(rim);
+  const contactShadow=new THREE.Mesh(new THREE.PlaneGeometry(12,12),new THREE.ShadowMaterial({opacity:.22}));contactShadow.rotation.x=-Math.PI/2;contactShadow.position.y=-.015;contactShadow.receiveShadow=true;previewScene.add(contactShadow);
   previewTurntable=new THREE.Group();previewScene.add(previewTurntable);
  }catch(error){console.warn('3D car preview unavailable:',error);previewRenderer=null;}
  function updatePreview(){
