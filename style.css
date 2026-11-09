@@ -25,3 +25,7 @@
 #car-preview{cursor:grab;touch-action:pan-y}#car-preview.dragging{cursor:grabbing;touch-action:none}
 
 .view-heading{font-size:9px;letter-spacing:.14em;color:#9aaca3;margin:0 0 7px}.camera-views{display:flex;gap:5px;margin-bottom:12px}.camera-views button{flex:1;padding:9px 4px;font-size:10px;color:#b9c8be}.camera-views button[aria-pressed=true]{background:#d8c491;color:#202822;border-color:#d8c491}
+/* main page: the rendered view of Aushiger (Blender, Poly Haven CC0 textures) behind the showroom and loader */
+#garage{background:#0b1115 url(backgrounds/aushiger-wide.jpg) center 40%/cover no-repeat}
+#load{background:linear-gradient(0deg,#0b1115e6,#0b111566 55%,#0b111526),#0b1115 url(backgrounds/aushiger-wide.jpg) center 40%/cover no-repeat}
+@media (max-aspect-ratio:4/5){#garage{background-image:url(backgrounds/aushiger-tall.jpg);background-position:center 42%}#load{background-image:linear-gradient(0deg,#0b1115e6,#0b111566 55%,#0b111526),url(backgrounds/aushiger-tall.jpg);background-position:center,center 42%}}
