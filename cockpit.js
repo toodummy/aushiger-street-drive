@@ -59,6 +59,7 @@ function make2106(){
  // Upholstered floor, transmission tunnel and seats.
  const carpet=mat(0x68111c,.98),seatFabric=mat(0xb21d31,.94),seatInset=mat(0x8d1727,.96),stitch=mat(0xcf4653,.95);
  box(2.05,.08,2.25,.16,-1.08,-.10,carpet);
+ box(2.15,.66,.07,.19,-.85,-.91,carpet);
  box(.28,.20,1.35,.36,-.96,-.20,black);
  for(let sx of [-.02,.82]){
   box(.64,.17,.68,sx,-.88,.06,seatFabric);
