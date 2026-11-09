@@ -4,6 +4,7 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="description" content="Explore a reference-based reconstruction of the north entrance and main street of Aushiger. Drive south or explore with a free camera.">
 <title>Go To Aushiger VII</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=Cormorant+Garamond:ital,wght@1,500;1,600&display=swap">
 <link rel="stylesheet" href="style.css?v=13">
 <script type="importmap">{"imports":{"three":"./vendor/three/build/three.module.js","three/addons/":"./vendor/three/examples/jsm/"}}</script>
 <style>
@@ -20,6 +21,16 @@
 .showroom-copy{top:max(190px,26%)}
 @media(max-width:700px){.showroom-copy{top:max(145px,23%)}}
 @media(max-height:650px) and (min-width:701px){.showroom-copy{top:max(160px,27%)}}
+
+/* loading title: large decorated capitals, tiny lowercase, warm gold-to-teal gradient */
+.load-title{margin:18px 0 26px;line-height:1;letter-spacing:0;font-weight:400;white-space:nowrap;filter:drop-shadow(0 4px 18px #d8c49140)}
+.load-title>span{display:inline-block}
+.load-title b,.load-title i{background:linear-gradient(100deg,#fff1c8 0%,#e8c46e 28%,#d98a4e 52%,#9fd3c4 78%,#e9f6ee 100%);background-size:220% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:titleShine 6s ease-in-out infinite alternate}
+.load-title b{font-family:"Cinzel Decorative","Cinzel",Georgia,serif;font-weight:900;font-size:clamp(46px,9vw,78px);letter-spacing:-.02em}
+.load-title i{font-family:"Cormorant Garamond",Georgia,serif;font-style:italic;font-weight:600;font-size:clamp(15px,2.6vw,22px);letter-spacing:.14em;margin-left:1px}
+.load-title b.num{font-size:clamp(30px,5.6vw,50px);margin-left:6px;letter-spacing:.04em}
+@keyframes titleShine{from{background-position:0% 50%}to{background-position:100% 50%}}
+@media(prefers-reduced-motion:reduce){.load-title b,.load-title i{animation:none}}
 </style>
 </head>
 <body>
@@ -54,7 +65,7 @@
  <button id="begin-drive" class="primary">Drive Lada 2106</button>
  <p class="garage-controls">W / S DRIVE <span>·</span> A / D STEER <span>·</span> MOUSE LOOK</p></div>
  </div></section>
-<div id="load"><div class="loading-card"><div class="eyebrow">Go To Aushiger VII</div><h2>Go To Aushiger VII</h2><p id="progress">Preparing your drive</p><div class="loading-track"><i id="loadbar"></i></div><button id="retry" hidden>Reload</button></div></div>
+<div id="load"><div class="loading-card"><h2 class="load-title" aria-label="Go To Aushiger VII"><span aria-hidden="true"><b>G</b><i>o</i> <b>T</b><i>o</i> <b>A</b><i>ushiger</i> <b class="num">VII</b></span></h2><p id="progress">Preparing your drive</p><div class="loading-track"><i id="loadbar"></i></div><button id="retry" hidden>Reload</button></div></div>
 <script type="module">
 import('./app-v3.js?v=37').catch(error=>{
   console.error(error);
