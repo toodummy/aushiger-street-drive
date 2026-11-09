@@ -1,4 +1,4 @@
-import {addLandscape} from './landscape.js?v=6';
+import {addLandscape} from './landscape.js?v=7';
 import {createGarage} from './garage.js?v=41';
 import * as THREE from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
@@ -6,7 +6,7 @@ import {EffectComposer} from 'three/addons/postprocessing/EffectComposer.js';
 import {RenderPass} from 'three/addons/postprocessing/RenderPass.js';
 import {SSAOPass} from 'three/addons/postprocessing/SSAOPass.js';
 import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
-import {textureWorld,upgradePhotographic,assetStatus} from './materials.js?v=6';
+import {textureWorld,upgradePhotographic,assetStatus} from './materials.js?v=10';
 import {lightWorld} from './environment.js?v=6';
 import {enrichWorld,batchTrees} from './detail.js?v=6';
 import {createDriveState,stepDrive,mouseLook,clamp} from './driving.js?v=7';
@@ -153,7 +153,7 @@ try{
   progress('Planting roadside details',74);
   await new Promise(requestAnimationFrame);
   details=enrichWorld(scene,world,sample,packs);batchTrees(world);
-  landscape=addLandscape(scene,world);
+  landscape=addLandscape(scene,world,packs);
   garage=createGarage(scene,()=>{keys.clear();state.cruise=false;state.speed=0;updateControls();},()=>{state.free=false;state.yaw=state.pitch=0;keys.clear();pose();updateControls();});
   progress('Preparing daylight and shadows',90);
   composer=new EffectComposer(renderer);renderPass=new RenderPass(scene,camera);renderPass.enabled=true;

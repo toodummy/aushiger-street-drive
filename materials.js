@@ -1,14 +1,19 @@
 import * as THREE from 'three';
 
 const loader = new THREE.TextureLoader();
+// [tile width m, tile height m, normal strength]
 const settings = {
-  asphalt: [3, 3, .42], gravel: [2, 2, .8], grass: [3.5, 3.5, .7],
-  clay: [3, 3, 1.1], stone: [1.2, 1.2, .7], plaster: [2, 2, .3],
-  brick: [1.5, 1.02, .8], blocks: [2.1, 1.32, .65],
+  asphalt: [3.2, 3.2, .9], gravel: [2.6, 2.6, 1.1], grass: [3, 3, 1.0],
+  clay: [3.5, 3.5, 1.2], stone: [1.6, 1.6, 1.0], plaster: [2.4, 2.4, .7],
+  brick: [1.8, 1.8, 1.0], blocks: [2.6, 2.6, .8],
   roof_red: [2.4, 2.4, .8], roof_grey: [2.4, 2.4, .7],
   roof_old: [2.4, 2.4, .8], roof_green: [2.4, 2.4, .7],
-  bark: [1.2, 2, .8], metal: [.6, .6, .15], leaf: [.3, .3, .2]
+  bark: [1.4, 1.4, 1.0], metal: [.6, .6, .15], leaf: [.3, .3, .2]
 };
+// 2K/1K photographic Poly Haven sets (CC0) shipped as JPG colour, OpenGL normal and roughness maps.
+const photo = new Set(['asphalt','gravel','grass','clay','stone','plaster','brick','blocks','bark']);
+// Ground is sampled twice at different scales and angles, blended by large-scale noise, so repeats do not show.
+const antiTiled = new Set(['asphalt','gravel','grass','clay']);
 export const assetStatus = {localMaps: 0, photoSets: 0, photoFailures: [], materials: 0};
 
 function configure(t, color, anisotropy) {
@@ -71,8 +76,22 @@ function macroVariation(m, type) {
     shader.fragmentShader = shader.fragmentShader.replace('#include <common>', `#include <common>
       varying vec3 vSurfaceWorld;
       float terrainHash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
-      float terrainNoise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.0-2.0*f);return mix(mix(terrainHash(i),terrainHash(i+vec2(1,0)),f.x),mix(terrainHash(i+vec2(0,1)),terrainHash(i+1.0),f.x),f.y);}`);
+      float terrainNoise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.0-2.0*f);return mix(mix(terrainHash(i),terrainHash(i+vec2(1,0)),f.x),mix(terrainHash(i+vec2(0,1)),terrainHash(i+1.0),f.x),f.y);}
+      vec4 antiTile(sampler2D t,vec2 uv){
+        vec2 uv2=mat2(.8,-.6,.6,.8)*uv*.43+vec2(.31,.17);
+        float b=smoothstep(.28,.72,terrainNoise(vSurfaceWorld.xz*.06+terrainNoise(vSurfaceWorld.xz*.21)*.6));
+        return mix(texture2D(t,uv),texture2D(t,uv2),b);
+      }`);
+    if(antiTiled.has(type)){
+      shader.fragmentShader=shader.fragmentShader
+        .replace('texture2D( map, vMapUv )','antiTile( map, vMapUv )')
+        .replace('texture2D( normalMap, vNormalMapUv )','antiTile( normalMap, vNormalMapUv )')
+        .replace('texture2D( roughnessMap, vRoughnessMapUv )','antiTile( roughnessMap, vRoughnessMapUv )');
+    }
     let code = '';
+    if(type==='clay'||type==='gravel') code=`
+      float soilPatch=terrainNoise(vSurfaceWorld.xz*.05)*.7+terrainNoise(vSurfaceWorld.xz*.4)*.3;
+      diffuseColor.rgb*=.86+.26*soilPatch;`;
     if(type==='grass') code=`
       float macro=terrainNoise(vSurfaceWorld.xz*.045)*.65+terrainNoise(vSurfaceWorld.xz*.31)*.35;
       diffuseColor.rgb *= mix(vec3(.68,.77,.60),vec3(1.17,1.15,.91),macro);
@@ -86,19 +105,21 @@ function macroVariation(m, type) {
       diffuseColor.rgb*=.85+.19*stain;`;
     shader.fragmentShader=shader.fragmentShader.replace('#include <color_fragment>','#include <color_fragment>\n'+code);
   };
-  m.customProgramCacheKey=()=>`aushiger-surface-${type}-3`;
+  m.customProgramCacheKey=()=>`aushiger-surface-${type}-5`;
 }
 
 export async function textureWorld(root, renderer, onProgress) {
-  const anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy());
+  const anisotropy=Math.min(16,renderer.capabilities.getMaxAnisotropy());
   const maps={};
   await Promise.all(Object.keys(settings).map(async name=>{
-    const [map,normalMap,arm]=await Promise.all(['color','normal','arm'].map(async channel=>{
-      const t=await loader.loadAsync(`textures/${name}_${channel}.png`);
+    const hd=photo.has(name);
+    const [map,normalMap,arm]=await Promise.all(['color','normal',hd?'rough':'arm'].map(async channel=>{
+      const t=await loader.loadAsync(`textures/${name}_${channel}.${hd?'jpg':'png'}`);
       assetStatus.localMaps++;onProgress?.(assetStatus.localMaps);
       return configure(t,channel==='color',anisotropy);
     }));
-    maps[name]={map,normalMap,arm,materials:[]};
+    maps[name]={map,normalMap,arm,hd,materials:[]};
+    if(hd)assetStatus.photoSets++;
   }));
   const done=new Set();
   root.traverse(o=>{
@@ -113,19 +134,20 @@ export async function textureWorld(root, renderer, onProgress) {
       if(done.has(m))continue;done.add(m);assetStatus.materials++;
       const t=family(m.name);if(!t)continue;
       const pack=maps[t];
-      m.map=pack.map;m.normalMap=pack.normalMap;m.roughnessMap=pack.arm;m.aoMap=pack.arm;m.aoMap.channel=0;
-      m.aoMapIntensity=.6;m.normalScale.setScalar(settings[t][2]);m.roughness=1;
+      m.map=pack.map;m.normalMap=pack.normalMap;m.roughnessMap=pack.arm;
+      if(pack.hd)m.aoMap=null;else{m.aoMap=pack.arm;m.aoMap.channel=0;m.aoMapIntensity=.6;}
+      m.normalScale.setScalar(settings[t][2]);m.roughness=1;
       if(t==='plaster') {
         if(/cream/i.test(m.name))m.color.set('#d4bd94');
         else if(/dark brown/i.test(m.name))m.color.set('#43372d');
         else if(/concrete/i.test(m.name))m.color.set('#aaa99c');
         else m.color.set('#f2f1e8');
       } else m.color.set('#ffffff');
-      if(t==='grass')m.color.set('#b4cc9b');
+      if(t==='grass')m.color.set('#b6dc8e');   // leafy_grass is earthy: pull it to spring green
       if(t==='asphalt'&&/repairs/i.test(m.name))m.color.set('#939591');
       if(t==='metal'){m.metalness=.78;m.roughness=.65;}
       if(t==='leaf'){m.side=THREE.DoubleSide;m.shadowSide=THREE.DoubleSide;}
-      if(['grass','asphalt','plaster','brick','blocks'].includes(t))macroVariation(m,t);
+      if(['grass','asphalt','clay','gravel','stone','plaster','brick','blocks'].includes(t))macroVariation(m,t);
       pack.materials.push(m);m.needsUpdate=true;
     }
   });
@@ -135,7 +157,7 @@ export async function textureWorld(root, renderer, onProgress) {
 // Optional photographic maps upgrade the already working local materials.
 // The public API supplies current, authoritative URLs. Failure leaves local maps intact.
 export async function upgradePhotographic(packs,onStatus) {
-  const requests=[['asphalt','asphalt_02'],['grass','aerial_grass_rock'],['clay','brown_mud']];
+  const requests=[];   // the 2K Poly Haven sets now ship with the game, so nothing is fetched at runtime
   await Promise.allSettled(requests.map(async([type,id])=>{
     try{
       const response=await fetch(`https://api.polyhaven.com/files/${id}`,{signal:AbortSignal.timeout(12000)});
