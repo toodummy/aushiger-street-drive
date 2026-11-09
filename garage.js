@@ -1,9 +1,9 @@
-import {makeCockpit} from './cockpit.js?v=6';
+import {makeCockpit} from './cockpit.js?v=7';
 import * as THREE from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 const $=s=>document.querySelector(s);
 const key='aushiger-local-cars';
-const builtins=[{id:'lada-2106-v1',name:'Lada 2106',top:60,url:'./cars/lada-2106.glb?v=6',seat:{yaw:0,height:.90,forward:.02}},{id:'lada-21074-v1',name:'Lada 2107',top:80,url:'./cars/lada-21074.glb',thumbnail:'./cars/lada-21074.jpg',seat:{yaw:0,height:.90,forward:.02}},{id:'lada-kalina-v1',name:'Lada Kalina',top:100,url:'./cars/lada-kalina.glb',thumbnail:'./cars/lada-kalina.jpg',seat:{yaw:0,height:.86,forward:0}},{id:'vw-polo-2017',name:'Volkswagen Polo',top:120,url:'./cars/vw-polo.glb?v=3',seat:{yaw:0,height:.88,forward:0}}];
+const builtins=[{id:'lada-2106-v1',name:'Lada 2106',top:60,url:'./cars/lada-2106.glb?v=6',seat:{yaw:0,height:.90,forward:.02}},{id:'lada-21074-v1',name:'Lada 2107',top:80,url:'./cars/lada-21074.glb',thumbnail:'./cars/lada-21074.jpg',seat:{yaw:0,height:.90,forward:.02}},{id:'lada-kalina-v1',name:'Lada Kalina',top:100,url:'./cars/lada-kalina.glb',thumbnail:'./cars/lada-kalina.jpg',seat:{yaw:0,height:.86,forward:0}},{id:'vw-polo-2017',name:'Volkswagen Polo',top:120,url:'./cars/vw-polo.glb?v=4',seat:{yaw:0,height:.88,forward:0}}];
 async function carFiles(item){if(item.files)return item.files;const r=await fetch(item.url);if(!r.ok)throw new Error('Could not load the Lada. Reload the page to try again.');return [new File([await r.arrayBuffer()],item.id+'.glb')];}
 function database(){return new Promise((resolve,reject)=>{const r=indexedDB.open(key,1);r.onupgradeneeded=()=>r.result.createObjectStore('cars',{keyPath:'id'});r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);});}
 async function records(action,value){const db=await database();try{return await new Promise((resolve,reject)=>{const tx=db.transaction('cars',action==='getAll'?'readonly':'readwrite');const r=tx.objectStore('cars')[action](value);let result;r.onsuccess=()=>result=r.result;tx.oncomplete=()=>resolve(result);tx.onerror=()=>reject(tx.error);});}finally{db.close();}}
@@ -41,6 +41,9 @@ export async function loadCar(files){
   return {root:pivot,size,driverEye,name:main.name.replace(/\.(glb|gltf)$/i,'')};
  }finally{urls.forEach(u=>URL.revokeObjectURL(u));}
 }
+const UP=new THREE.Vector3(0,1,0);
+// Rough five-speed rev curve (x1000 rpm) for the Polo's modelled rev counter.
+const polRpm=kmh=>kmh<1?.85:1.3+(kmh-Math.min(4,Math.floor(kmh/28))*28)/28*2.7;
 export function createGarage(scene,onPause,onStart){
  const vehicle=new THREE.Group();scene.add(vehicle);vehicle.visible=false;
  let selected=null,loaded=null,items=[...builtins],busy=false,open=true,cockpit=null;
@@ -112,12 +115,12 @@ export function createGarage(scene,onPause,onStart){
  async function importFiles(files){if(busy||!files.length)return;const list=Array.from(files);if(!list.some(f=>/\.(glb|gltf)$/i.test(f.name))){message('No GLB or GLTF found. Upload the model here or send its ZIP in chat for conversion.');return;}const id=crypto.randomUUID(),main=list.find(f=>/\.(glb|gltf)$/i.test(f.name));const item={id,name:main.name.replace(/\.(glb|gltf)$/i,''),files:list};items.push(item);await choose(id);if(selected===id){try{await records('put',item);}catch{message('Car loaded for this session. Your browser could not save it; select it again next time.');}}else items=items.filter(i=>i.id!==id);drawList();}
  
  $('#open-garage').onclick=()=>show();$('#begin-drive').onclick=()=>{if(busy)return;open=false;$('#garage').hidden=true;document.body.classList.remove('garage-open');onStart();};
- function show(){open=true;if(loaded){loaded.root.visible=true;loaded.root.traverse(o=>{if(/steer/i.test(o.name)||(selected==='lada-2106-v1'&&/^(Body_Cabin|Body_Lower|Glass_.*|DripRail.*|Dash)(?:_\d+)?$/.test(o.name))||(selected==='vw-polo-2017'&&o.isMesh))o.visible=true;});}onPause();document.exitPointerLock?.();document.body.classList.remove('minimal');$('#garage').hidden=false;document.body.classList.add('garage-open');drawList();startPreview();}
+ function show(){open=true;if(loaded){loaded.root.visible=true;loaded.root.traverse(o=>{if(/steer/i.test(o.name)||(selected==='lada-2106-v1'&&/^(Body_Cabin|Body_Lower|Glass_.*|DripRail.*|Dash)(?:_\d+)?$/.test(o.name))||(selected==='vw-polo-2017'&&/^(Glass_|Windscreen|Rear_Screen|Window_Frame|Body_Shell)/.test(o.name)))o.visible=true;});}onPause();document.exitPointerLock?.();document.body.classList.remove('minimal');$('#garage').hidden=false;document.body.classList.add('garage-open');drawList();startPreview();}
  function sync(p,q,free){position.copy(p);rotation.copy(q);vehicle.position.copy(p);vehicle.quaternion.copy(q);vehicle.visible=!!loaded&&!free;}
  function eye(view='interior'){
   const interior=view==='interior'&&!open;
   if(cockpit)cockpit.visible=interior;
-  if(loaded){loaded.root.visible=true;loaded.root.traverse(o=>{if(/steer/i.test(o.name)||(selected==='lada-2106-v1'&&/^(Body_Cabin|Body_Lower|Glass_.*|DripRail.*|Dash)(?:_\d+)?$/.test(o.name))||(selected==='vw-polo-2017'&&o.isMesh))o.visible=!interior;});}
+  if(loaded){loaded.root.visible=true;loaded.root.traverse(o=>{if(/steer/i.test(o.name)||(selected==='lada-2106-v1'&&/^(Body_Cabin|Body_Lower|Glass_.*|DripRail.*|Dash)(?:_\d+)?$/.test(o.name))||(selected==='vw-polo-2017'&&/^(Glass_|Windscreen|Rear_Screen|Window_Frame|Body_Shell)/.test(o.name)))o.visible=!interior;});}
   if(!loaded){const fallback=view==='outside'?new THREE.Vector3(0,3.1,7):new THREE.Vector3(0,1.72,0);return fallback.applyQuaternion(rotation).add(position);}
   if(view==='interior')return seat.clone().applyQuaternion(rotation).add(position);
   const yaw=settings.get(selected)?.yaw||0;
@@ -125,5 +128,5 @@ export function createGarage(scene,onPause,onStart){
   local.applyAxisAngle(new THREE.Vector3(0,1,0),yaw);return local.applyQuaternion(rotation).add(position);
  }
  
- drawList();show();choose(builtins[0].id);return {get isOpen(){return open;},setSpeed(v){cockpit?.userData.setSpeed?.(v);},get topSpeed(){return (items.find(i=>i.id===selected)?.top??80)/3.6;},get hasCar(){return !!loaded;},show,sync,eye};
+ drawList();show();choose(builtins[0].id);return {get isOpen(){return open;},setSpeed(v){cockpit?.userData.setSpeed?.(v);const kmh=Math.abs(v)*3.6;for(const [name,t] of [['Int_Needle_Speed_Hand',kmh/240],['Int_Needle_Tach_Hand',polRpm(kmh)/8]]){const hand=loaded?.root.getObjectByName(name);if(hand)hand.quaternion.setFromAxisAngle(UP,(225-270*Math.min(1,Math.max(0,t)))*Math.PI/180);}},get topSpeed(){return (items.find(i=>i.id===selected)?.top??80)/3.6;},get hasCar(){return !!loaded;},show,sync,eye};
 }
