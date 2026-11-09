@@ -1,4 +1,4 @@
-import {makeCockpit} from './cockpit.js?v=5';
+import {makeCockpit} from './cockpit.js?v=6';
 import * as THREE from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 const $=s=>document.querySelector(s);
@@ -101,7 +101,7 @@ export function createGarage(scene,onPause,onStart){
    if(!id){dispose(loaded?.root);vehicle.clear();loaded=null;$('#seat-controls').hidden=true;message('Explore the road without a vehicle.');}
    else{
     message('Loading your car and its textures…');const item=items.find(i=>i.id===id),result=await loadCar(await carFiles(item));result.name=item.name;if(item.seat&&!settings.has(id))settings.set(id,result.driverEye?{yaw:0,height:result.driverEye.y/result.size.y,forward:result.driverEye.z/result.size.z}:item.seat);
-    dispose(loaded?.root);if(cockpit)dispose(cockpit);vehicle.clear();loaded=result;vehicle.add(result.root);cockpit=makeCockpit(id==='lada-kalina-v1',id==='lada-2106-v1');vehicle.add(cockpit);
+    dispose(loaded?.root);if(cockpit)dispose(cockpit);vehicle.clear();loaded=result;vehicle.add(result.root);cockpit=makeCockpit(id==='lada-kalina-v1',id==='lada-2106-v1',id==='vw-polo-2017');vehicle.add(cockpit);
     try{const s=JSON.parse(localStorage.getItem('aushiger-seat-'+id));if(s)settings.set(id,s);}catch{}
     const s=settings.get(id)||{yaw:0,height:.82,forward:-.08};$('#car-facing').value=String(s.yaw);$('#seat-height').value=String(s.height);$('#seat-forward').value=String(s.forward);applySettings();$('#seat-controls').hidden=false;message(result.name+' selected. Start driving to view its actual hood from the driver’s seat.');
    }
@@ -112,12 +112,12 @@ export function createGarage(scene,onPause,onStart){
  async function importFiles(files){if(busy||!files.length)return;const list=Array.from(files);if(!list.some(f=>/\.(glb|gltf)$/i.test(f.name))){message('No GLB or GLTF found. Upload the model here or send its ZIP in chat for conversion.');return;}const id=crypto.randomUUID(),main=list.find(f=>/\.(glb|gltf)$/i.test(f.name));const item={id,name:main.name.replace(/\.(glb|gltf)$/i,''),files:list};items.push(item);await choose(id);if(selected===id){try{await records('put',item);}catch{message('Car loaded for this session. Your browser could not save it; select it again next time.');}}else items=items.filter(i=>i.id!==id);drawList();}
  
  $('#open-garage').onclick=()=>show();$('#begin-drive').onclick=()=>{if(busy)return;open=false;$('#garage').hidden=true;document.body.classList.remove('garage-open');onStart();};
- function show(){open=true;if(loaded){loaded.root.visible=true;loaded.root.traverse(o=>{if(/steer/i.test(o.name)||(selected==='lada-2106-v1'&&/^(Body_Cabin|Body_Lower|Glass_.*|DripRail.*|Dash)(?:_\d+)?$/.test(o.name))||(selected==='vw-polo-2017'&&/^(Glass_|Windscreen|Rear_Screen|Window_Frame|Dash)/.test(o.name)))o.visible=true;});}onPause();document.exitPointerLock?.();document.body.classList.remove('minimal');$('#garage').hidden=false;document.body.classList.add('garage-open');drawList();startPreview();}
+ function show(){open=true;if(loaded){loaded.root.visible=true;loaded.root.traverse(o=>{if(/steer/i.test(o.name)||(selected==='lada-2106-v1'&&/^(Body_Cabin|Body_Lower|Glass_.*|DripRail.*|Dash)(?:_\d+)?$/.test(o.name))||(selected==='vw-polo-2017'&&o.isMesh))o.visible=true;});}onPause();document.exitPointerLock?.();document.body.classList.remove('minimal');$('#garage').hidden=false;document.body.classList.add('garage-open');drawList();startPreview();}
  function sync(p,q,free){position.copy(p);rotation.copy(q);vehicle.position.copy(p);vehicle.quaternion.copy(q);vehicle.visible=!!loaded&&!free;}
  function eye(view='interior'){
   const interior=view==='interior'&&!open;
   if(cockpit)cockpit.visible=interior;
-  if(loaded){loaded.root.visible=true;loaded.root.traverse(o=>{if(/steer/i.test(o.name)||(selected==='lada-2106-v1'&&/^(Body_Cabin|Body_Lower|Glass_.*|DripRail.*|Dash)(?:_\d+)?$/.test(o.name))||(selected==='vw-polo-2017'&&/^(Glass_|Windscreen|Rear_Screen|Window_Frame|Dash)/.test(o.name)))o.visible=!interior;});}
+  if(loaded){loaded.root.visible=true;loaded.root.traverse(o=>{if(/steer/i.test(o.name)||(selected==='lada-2106-v1'&&/^(Body_Cabin|Body_Lower|Glass_.*|DripRail.*|Dash)(?:_\d+)?$/.test(o.name))||(selected==='vw-polo-2017'&&o.isMesh))o.visible=!interior;});}
   if(!loaded){const fallback=view==='outside'?new THREE.Vector3(0,3.1,7):new THREE.Vector3(0,1.72,0);return fallback.applyQuaternion(rotation).add(position);}
   if(view==='interior')return seat.clone().applyQuaternion(rotation).add(position);
   const yaw=settings.get(selected)?.yaw||0;
@@ -125,5 +125,5 @@ export function createGarage(scene,onPause,onStart){
   local.applyAxisAngle(new THREE.Vector3(0,1,0),yaw);return local.applyQuaternion(rotation).add(position);
  }
  
- drawList();show();choose(builtins[0].id);return {get isOpen(){return open;},get topSpeed(){return (items.find(i=>i.id===selected)?.top??80)/3.6;},get hasCar(){return !!loaded;},show,sync,eye};
+ drawList();show();choose(builtins[0].id);return {get isOpen(){return open;},setSpeed(v){cockpit?.userData.setSpeed?.(v);},get topSpeed(){return (items.find(i=>i.id===selected)?.top??80)/3.6;},get hasCar(){return !!loaded;},show,sync,eye};
 }

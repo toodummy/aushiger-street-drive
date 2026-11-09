@@ -1,5 +1,5 @@
 import {addLandscape} from './landscape.js?v=6';
-import {createGarage} from './garage.js?v=36';
+import {createGarage} from './garage.js?v=37';
 import * as THREE from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {EffectComposer} from 'three/addons/postprocessing/EffectComposer.js';
@@ -168,7 +168,7 @@ $('#retry')?.addEventListener('click',()=>location.reload());
 const clock=new THREE.Clock();
 renderer.setAnimationLoop(()=>{
   const elapsed=clock.getDelta(),dt=Math.min(elapsed,.05);if(!ready)return;
-  const wasCruise=state.cruise;if(!state.free&&!garage?.isOpen)stepDrive(state,keys,dt,1490,garage.topSpeed);if(wasCruise!==state.cruise)updateControls();
+  const wasCruise=state.cruise;if(!state.free&&!garage?.isOpen)stepDrive(state,keys,dt,1490,garage.topSpeed);garage?.setSpeed(state.speed);if(wasCruise!==state.cruise)updateControls();
   pose(garage?.isOpen?0:dt);lighting.update(camera,forward);landscape?.update(dt);
   if(quality==='high')composer.render();else renderer.render(scene,camera);
   frames++;frameTime+=elapsed;hudElapsed+=elapsed;
