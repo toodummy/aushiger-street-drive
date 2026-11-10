@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
-import {loadCar} from './garage.js?v=41';
+import {loadCar} from './garage.js?v=42';
+import {crumple,ownGeometry} from './damage.js?v=1';
 
 // Random village traffic: oncoming cars in the left lane, slow cars ahead you can pass,
 // and faster cars that come up behind you and overtake when the other lane is clear.
@@ -44,7 +45,7 @@ function bake(root,paintRe){
   return {group,paint};
 }
 
-export function createTraffic(scene,sample){
+export function createTraffic(scene,sample,{onPlayerHit}={}){
   const templates=[],cars=[],up=new THREE.Vector3(0,1,0),m4=new THREE.Matrix4();
   const tmpP=new THREE.Vector3(),tmpQ=new THREE.Vector3(),fwd=new THREE.Vector3(),right=new THREE.Vector3();
   let spawnClock=2,id=0;
@@ -69,7 +70,7 @@ export function createTraffic(scene,sample){
     else{if(player.distance<110||player.speed>17)return;d=player.distance-80-Math.random()*30;dir=1;speed=Math.max(player.speed+5,13+Math.random()*6);}
     const lat=dir*LANE;
     if(cars.some(c=>Math.abs(c.d-d)<25&&Math.sign(c.lat)===Math.sign(lat)))return;
-    cars.push({id:id++,kind,d,dir,lat,targetLat:lat,speed,cruise:speed,obj:make(),passing:null});
+    cars.push({id:id++,kind,d,dir,lat,targetLat:lat,speed,cruise:speed,baseCruise:speed,damage:0,hitCool:0,obj:make(),passing:null});
   }
   function place(c){
     const a=sample(c.d),b=sample(c.d+1);fwd.copy(b).sub(a).normalize();right.crossVectors(fwd,up).normalize();
@@ -125,11 +126,24 @@ export function createTraffic(scene,sample){
         c.speed+=THREE.MathUtils.clamp(target-c.speed,-8*dt,3*dt);
         c.lat+=THREE.MathUtils.clamp(c.targetLat-c.lat,-1.3*dt,1.3*dt);
         c.d+=c.speed*c.dir*dt;
-        // never drive through the player: stop both cars at bumper distance
+        // collisions with the player: both cars take damage, share momentum and keep going (slower)
+        c.hitCool=Math.max(0,c.hitCool-dt);
         const dd=player.distance-c.d,dl=player.lateral-c.lat;
         if(Math.abs(dd)<CAR_LEN&&Math.abs(dl)<CAR_W){
-          if(Math.sign(dd)===Math.sign(player.speed)||player.speed===0)player.speed=0;
-          player.distance=c.d+Math.sign(dd||1)*CAR_LEN;player.cruise=false;if(dd*c.dir>0)c.speed=0;
+          const side=Math.sign(dd||1),vOther=c.speed*c.dir,closing=(vOther-player.speed)*side;
+          if(closing>1.2&&c.hitCool<=0){
+            const amount=Math.min(.55,.04+closing/45);c.hitCool=.8;
+            const vMid=(player.speed+vOther)/2;
+            player.speed=vMid-side*closing*.12;player.cruise=false;
+            c.speed=Math.max(0,(vMid+side*closing*.12)*c.dir);
+            c.damage=Math.min(1,c.damage+amount);c.cruise=c.baseCruise*(1-.65*c.damage);if(c.damage>.85)c.cruise=0;
+            const a=sample((player.distance+c.d)/2);fwd.copy(sample((player.distance+c.d)/2+1)).sub(a).normalize();right.crossVectors(fwd,up).normalize();
+            const point=a.clone().addScaledVector(right,(player.lateral+c.lat)/2);point.y+=.6;
+            const intoCar=fwd.clone().multiplyScalar(-side);
+            ownGeometry(c.obj);crumple(c.obj,point,intoCar,1.0,.12+amount*.45);
+            onPlayerHit?.({point,amount,dir:fwd.clone().multiplyScalar(side)});
+          }
+          player.distance=c.d+side*CAR_LEN;
         }
         place(c);
       }

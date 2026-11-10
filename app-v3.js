@@ -1,7 +1,8 @@
 import {addLandscape} from './landscape.js?v=7';
-import {createGarage} from './garage.js?v=41';
-import {createTraffic} from './traffic.js?v=1';
-import {createCows} from './cows.js?v=1';
+import {createGarage} from './garage.js?v=42';
+import {createTraffic} from './traffic.js?v=2';
+import {createCows} from './cows.js?v=2';
+import {crumple,repair,createSmoke} from './damage.js?v=1';
 import * as THREE from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {EffectComposer} from 'three/addons/postprocessing/EffectComposer.js';
@@ -11,7 +12,7 @@ import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
 import {textureWorld,upgradePhotographic,assetStatus} from './materials.js?v=8';
 import {lightWorld} from './environment.js?v=6';
 import {enrichWorld,batchTrees} from './detail.js?v=6';
-import {createDriveState,stepDrive,mouseLook,clamp,START} from './driving.js?v=8';
+import {createDriveState,stepDrive,mouseLook,clamp,START} from './driving.js?v=9';
 
 const $=s=>document.querySelector(s);
 let renderer;
@@ -30,7 +31,7 @@ const viewQ=new THREE.Quaternion(),baseQ=new THREE.Quaternion(),freeBase=new THR
 const lookMatrix=new THREE.Matrix4(),lookEuler=new THREE.Euler(0,0,0,'YXZ');
 const freePosition=new THREE.Vector3();
 let route,ready=false,lighting,details,world,packs,drag=null,quality='balanced',photoSky=false;
-let composer,ssao,renderPass,outputPass,landscape,garage,traffic,cows;
+let composer,ssao,renderPass,outputPass,landscape,garage,traffic,cows,smoke;const enginePos=new THREE.Vector3(),carVel=new THREE.Vector3();
 let frames=0,frameTime=0,fps=0,hudElapsed=0,driveView='interior';
 
 function sample(d){
@@ -58,6 +59,8 @@ function pose(dt=0){
     garage?.sync(carPosition,baseQ,false);
     camera.position.copy(garage?.eye(driveView)||carPosition.clone().add(new THREE.Vector3(0,1.72,0)));
     camera.quaternion.copy(baseQ).multiply(viewQ);
+    if(shake>0){shake=Math.max(0,shake-dt*1.6);camera.position.x+=(Math.random()-.5)*shake*.12;camera.position.y+=(Math.random()-.5)*shake*.12;}
+    enginePos.copy(carPosition).addScaledVector(forward,1.75).addScaledVector(up,.85);carVel.copy(forward).multiplyScalar(state.speed);
     if(driveView==='outside')camera.quaternion.multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.12,0,0)));
   }
   camera.updateMatrixWorld();
@@ -67,7 +70,10 @@ function updateControls(){
   $('#mode').textContent=state.free?'Return to road':'Free camera';$('#mode').setAttribute('aria-pressed',String(state.free));
   $('#cruise').disabled=state.free;$('#mode-label').textContent=state.free?'FREE CAMERA':'SOUTHBOUND';
 }
-function reset(distance=START){Object.assign(state,createDriveState(),{distance:Math.max(START,distance)});keys.clear();camera.fov=68;camera.updateProjectionMatrix();pose();updateControls();}
+function takeHit({point,dir,amount}){state.damage=Math.min(1,(state.damage||0)+amount);crumple(garage?.carRoot,point,dir,.95,.1+amount*.5);shake=Math.max(shake,.25+amount);updateDamage();}
+document.querySelector('footer')?.addEventListener('contextmenu',e=>e.preventDefault());
+let shake=0;function updateDamage(){const el=document.getElementById('damage');if(!el)return;const ok=Math.round((1-(state.damage||0))*100);el.textContent=ok+'%';el.parentElement.classList.toggle('hurt',ok<70);el.parentElement.classList.toggle('wrecked',ok<35);}
+function reset(distance=START){repair(garage?.carRoot);Object.assign(state,createDriveState(),{distance:Math.max(START,distance)});updateDamage();keys.clear();camera.fov=68;camera.updateProjectionMatrix();pose();updateControls();}
 function toggleFree(){
   if(!ready)return;
   if(!state.free){freePosition.copy(camera.position);freeBase.copy(camera.quaternion);state.yaw=state.pitch=0;state.cruise=false;state.speed=0;state.free=true;}
@@ -157,7 +163,7 @@ try{
   details=enrichWorld(scene,world,sample,packs);batchTrees(world);
   landscape=addLandscape(scene,world);
   garage=createGarage(scene,()=>{keys.clear();state.cruise=false;state.speed=0;updateControls();},()=>{state.free=false;state.yaw=state.pitch=0;keys.clear();pose();updateControls();});
-  cows=createCows(scene,sample);traffic=createTraffic(scene,sample);
+  cows=createCows(scene,sample,{onHit:takeHit});traffic=createTraffic(scene,sample,{onPlayerHit:takeHit});smoke=createSmoke(scene);
   progress('Preparing daylight and shadows',90);
   composer=new EffectComposer(renderer);renderPass=new RenderPass(scene,camera);renderPass.enabled=true;
   ssao=new SSAOPass(scene,camera,innerWidth,innerHeight);ssao.kernelRadius=7;ssao.minDistance=.001;ssao.maxDistance=.06;
@@ -173,7 +179,7 @@ $('#retry')?.addEventListener('click',()=>location.reload());
 const clock=new THREE.Clock();
 renderer.setAnimationLoop(()=>{
   const elapsed=clock.getDelta(),dt=Math.min(elapsed,.05);if(!ready)return;
-  const wasCruise=state.cruise;if(!state.free&&!garage?.isOpen)stepDrive(state,keys,dt,1490,garage.topSpeed);if(!garage?.isOpen){cows?.update(dt,state,traffic?.obstacles()||[]);traffic?.update(dt,state,cows?.obstacles()||[]);}garage?.setSpeed(state.speed);if(wasCruise!==state.cruise)updateControls();
+  const wasCruise=state.cruise;if(!state.free&&!garage?.isOpen)stepDrive(state,keys,dt,1490,garage.topSpeed);if(!garage?.isOpen){cows?.update(dt,state,traffic?.obstacles()||[]);traffic?.update(dt,state,cows?.obstacles()||[]);}smoke?.update(dt,garage?.hasCar&&!state.free?enginePos:null,state.damage||0,carVel);garage?.setSpeed(state.speed);if(wasCruise!==state.cruise)updateControls();
   pose(garage?.isOpen?0:dt);lighting.update(camera,forward);landscape?.update(dt);
   if(quality==='high')composer.render();else renderer.render(scene,camera);
   frames++;frameTime+=elapsed;hudElapsed+=elapsed;

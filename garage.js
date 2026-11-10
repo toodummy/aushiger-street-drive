@@ -128,5 +128,5 @@ export function createGarage(scene,onPause,onStart){
   local.applyAxisAngle(new THREE.Vector3(0,1,0),yaw);return local.applyQuaternion(rotation).add(position);
  }
  
- drawList();show();choose(builtins[0].id);return {get isOpen(){return open;},setSpeed(v){cockpit?.userData.setSpeed?.(v);const kmh=Math.abs(v)*3.6;for(const [name,t] of [['Int_Needle_Speed_Hand',kmh/(selected==='lada-21074-v1'?180:240)],['Int_Needle_Tach_Hand',polRpm(kmh)/8]]){const hand=loaded?.root.getObjectByName(name);if(hand)hand.quaternion.setFromAxisAngle(UP,(225-270*Math.min(1,Math.max(0,t)))*Math.PI/180);}},get topSpeed(){return (items.find(i=>i.id===selected)?.top??80)/3.6;},get hasCar(){return !!loaded;},show,sync,eye};
+ drawList();show();choose(builtins[0].id);return {get isOpen(){return open;},setSpeed(v){cockpit?.userData.setSpeed?.(v);const kmh=Math.abs(v)*3.6;for(const [name,t] of [['Int_Needle_Speed_Hand',kmh/(selected==='lada-21074-v1'?180:240)],['Int_Needle_Tach_Hand',polRpm(kmh)/8]]){const hand=loaded?.root.getObjectByName(name);if(hand)hand.quaternion.setFromAxisAngle(UP,(225-270*Math.min(1,Math.max(0,t)))*Math.PI/180);}},get topSpeed(){return (items.find(i=>i.id===selected)?.top??80)/3.6;},get hasCar(){return !!loaded;},get carRoot(){return loaded?.root;},show,sync,eye};
 }
