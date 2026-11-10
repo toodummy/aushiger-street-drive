@@ -44,32 +44,18 @@ function make2106(){
  let horn=new THREE.Mesh(new THREE.BoxGeometry(.43,.055,.035),chrome);horn.position.set(0,0,.012);wheel.add(horn);
  let hornpad=new THREE.Mesh(new THREE.BoxGeometry(.30,.044,.042),black);hornpad.position.set(0,0,.03);wheel.add(hornpad);
  let emblem=new THREE.Mesh(new THREE.BoxGeometry(.038,.034,.008),chrome);emblem.position.set(0,0,.056);wheel.add(emblem);
- // Cream body surround, black roof and red door trim are separate from
- // the solid shell used for the exterior model.
- const pillar=mat(0xa49d89,.75), lining=mat(0x292827,.94);
- box(2.35,.12,.95,.22,.43,-.53,lining);
- box(2.18,.065,.09,.19,.365,-.92,black);
- const lp=box(.09,.98,.12,-.80,-.03,-.85,pillar);lp.rotation.z=-.22;
- const rp=box(.09,.98,.12,1.13,-.03,-.85,pillar);rp.rotation.z=.22;
- const ls=box(.025,.97,.14,-.74,-.03,-.855,edge);ls.rotation.z=-.22;
- const rs=box(.025,.97,.14,1.07,-.03,-.855,edge);rs.rotation.z=.22;
+ // Red door trim; the roof, pillars and rear window come from the car's own cabin shell.
+ // Light perforated headliner under the shell's roof, front to rear window.
+ box(1.42,.02,2.35,.17,.405,.25,mat(0xc9c2b0,.95));
  box(.08,.56,1.35,-.92,-.58,-.20,red);box(.08,.56,1.35,1.25,-.58,-.20,red);
  box(.09,.08,1.35,-.92,-.30,-.20,black);box(.09,.08,1.35,1.25,-.30,-.20,black);
  for(let y of [-.43,-.53,-.63]){box(.012,.006,1.13,-.873,y,-.20,chrome);box(.012,.006,1.13,1.203,y,-.20,chrome)}
- // Upholstered floor, transmission tunnel and seats.
- const carpet=mat(0x68111c,.98),seatFabric=mat(0xb21d31,.94),seatInset=mat(0x8d1727,.96),stitch=mat(0xcf4653,.95);
+ // Upholstered floor and transmission tunnel.
+ const carpet=mat(0x68111c,.98);
  box(2.05,.08,2.25,.16,-1.08,-.10,carpet);
  box(2.15,.66,.07,.19,-.85,-.91,carpet);
  box(.28,.20,1.35,.36,-.96,-.20,black);
- for(let sx of [-.02,.82]){
-  box(.64,.17,.68,sx,-.88,.06,seatFabric);
-  box(.54,.025,.55,sx,-.785,.06,seatInset);
-  for(let k=-2;k<=2;k++)box(.007,.007,.52,sx+k*.09,-.769,.06,stitch);
-  box(.64,.70,.14,sx,-.52,.43,seatFabric);
-  box(.52,.54,.02,sx,-.52,.345,seatInset);
-  for(let k=-2;k<=2;k++)box(.007,.50,.005,sx+k*.09,-.52,.331,stitch);
-  box(.25,.16,.12,sx,-.08,.43,seatFabric);
- }
+ // Seats come from the car model (red velour, restyled in seats.js), so the rear bench stays in view.
  // Console, gear lever and pedal set.
  box(.36,.24,.22,.59,-.80,-.75,black);
  const lever=box(.035,.28,.035,.45,-.83,-.49,chrome);lever.rotation.x=-.22;
@@ -79,8 +65,6 @@ function make2106(){
  box(.10,.54,.45,-.91,-.57,-.88,red);
  box(.10,.075,.47,-.91,-.30,-.88,black);
  const sill=box(.09,.10,1.85,-.91,-.88,-.15,black);
- const backPillar=box(.085,1.1,.10,-.91,-.03,.56,pillar);backPillar.rotation.z=-.02;
- box(.11,.08,1.65,-.89,.36,-.10,black);
  wheel.traverse(o=>{if(o.isMesh){o.material=o.material.clone();o.material.depthTest=false;o.material.depthWrite=false;o.renderOrder=100;}});
  return root;
 }
