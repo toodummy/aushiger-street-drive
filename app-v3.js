@@ -6,10 +6,10 @@ import {EffectComposer} from 'three/addons/postprocessing/EffectComposer.js';
 import {RenderPass} from 'three/addons/postprocessing/RenderPass.js';
 import {SSAOPass} from 'three/addons/postprocessing/SSAOPass.js';
 import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
-import {textureWorld,upgradePhotographic,assetStatus} from './materials.js?v=7';
+import {textureWorld,upgradePhotographic,assetStatus} from './materials.js?v=8';
 import {lightWorld} from './environment.js?v=6';
 import {enrichWorld,batchTrees} from './detail.js?v=6';
-import {createDriveState,stepDrive,mouseLook,clamp} from './driving.js?v=7';
+import {createDriveState,stepDrive,mouseLook,clamp,START} from './driving.js?v=8';
 
 const $=s=>document.querySelector(s);
 let renderer;
@@ -65,7 +65,7 @@ function updateControls(){
   $('#mode').textContent=state.free?'Return to road':'Free camera';$('#mode').setAttribute('aria-pressed',String(state.free));
   $('#cruise').disabled=state.free;$('#mode-label').textContent=state.free?'FREE CAMERA':'SOUTHBOUND';
 }
-function reset(distance=0){Object.assign(state,createDriveState(),{distance});keys.clear();camera.fov=68;camera.updateProjectionMatrix();pose();updateControls();}
+function reset(distance=START){Object.assign(state,createDriveState(),{distance:Math.max(START,distance)});keys.clear();camera.fov=68;camera.updateProjectionMatrix();pose();updateControls();}
 function toggleFree(){
   if(!ready)return;
   if(!state.free){freePosition.copy(camera.position);freeBase.copy(camera.quaternion);state.yaw=state.pitch=0;state.cruise=false;state.speed=0;state.free=true;}

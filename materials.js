@@ -75,9 +75,16 @@ function macroVariation(m, type) {
     let code = '';
     if(type==='grass') code=`
       float macro=terrainNoise(vSurfaceWorld.xz*.045)*.65+terrainNoise(vSurfaceWorld.xz*.31)*.35;
-      diffuseColor.rgb *= mix(vec3(.68,.77,.60),vec3(1.17,1.15,.91),macro);
-      float dry=smoothstep(.70,.88,terrainNoise(vSurfaceWorld.xz*.18));
-      diffuseColor.rgb=mix(diffuseColor.rgb,diffuseColor.rgb*vec3(1.26,1.01,.76),dry*.6);`;
+      diffuseColor.rgb *= mix(vec3(.72,.80,.62),vec3(1.15,1.16,.90),macro);
+      float dry=smoothstep(.74,.90,terrainNoise(vSurfaceWorld.xz*.18));
+      diffuseColor.rgb=mix(diffuseColor.rgb,diffuseColor.rgb*vec3(1.22,1.01,.78),dry*.35);
+      // gentle late-spring push: multiply toward green so the photo detail stays
+      diffuseColor.rgb=mix(diffuseColor.rgb,diffuseColor.rgb*vec3(.86,1.16,.70),.7);`;
+    if(type==='gravel') code=`
+      // grass growing through the dusty shoulders in patches
+      float tuft=smoothstep(.42,.70,terrainNoise(vSurfaceWorld.xz*.55)*.6+terrainNoise(vSurfaceWorld.xz*2.3)*.4);
+      vec3 green=diffuseColor.rgb*vec3(.55,.85,.38);
+      diffuseColor.rgb=mix(diffuseColor.rgb,green,tuft*.65);`;
     if(type==='asphalt') code=`
       float weather=terrainNoise(vSurfaceWorld.xz*.3);
       diffuseColor.rgb*=.91+.18*weather;`;
@@ -86,7 +93,7 @@ function macroVariation(m, type) {
       diffuseColor.rgb*=.85+.19*stain;`;
     shader.fragmentShader=shader.fragmentShader.replace('#include <color_fragment>','#include <color_fragment>\n'+code);
   };
-  m.customProgramCacheKey=()=>`aushiger-surface-${type}-3`;
+  m.customProgramCacheKey=()=>`aushiger-surface-${type}-4`;
 }
 
 export async function textureWorld(root, renderer, onProgress) {
@@ -125,7 +132,7 @@ export async function textureWorld(root, renderer, onProgress) {
       if(t==='asphalt'&&/repairs/i.test(m.name))m.color.set('#939591');
       if(t==='metal'){m.metalness=.78;m.roughness=.65;}
       if(t==='leaf'){m.side=THREE.DoubleSide;m.shadowSide=THREE.DoubleSide;}
-      if(['grass','asphalt','plaster','brick','blocks'].includes(t))macroVariation(m,t);
+      if(['grass','gravel','asphalt','plaster','brick','blocks'].includes(t))macroVariation(m,t);
       pack.materials.push(m);m.needsUpdate=true;
     }
   });
