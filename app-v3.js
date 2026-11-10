@@ -6,7 +6,7 @@ import {EffectComposer} from 'three/addons/postprocessing/EffectComposer.js';
 import {RenderPass} from 'three/addons/postprocessing/RenderPass.js';
 import {SSAOPass} from 'three/addons/postprocessing/SSAOPass.js';
 import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
-import {textureWorld,upgradePhotographic,assetStatus} from './materials.js?v=6';
+import {textureWorld,upgradePhotographic,assetStatus} from './materials.js?v=7';
 import {lightWorld} from './environment.js?v=6';
 import {enrichWorld,batchTrees} from './detail.js?v=6';
 import {createDriveState,stepDrive,mouseLook,clamp} from './driving.js?v=7';

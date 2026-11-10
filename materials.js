@@ -133,26 +133,58 @@ export async function textureWorld(root, renderer, onProgress) {
 }
 
 // Optional photographic maps upgrade the already working local materials.
-// The public API supplies current, authoritative URLs. Failure leaves local maps intact.
+// Every surface family gets a matching CC0 Poly Haven scan, loaded in the player's browser.
+// width = the scan's real-world width in metres, so bricks, tiles and gravel keep true size.
+// Phones and low-memory devices get 1K maps, everything else 2K. Failure leaves local maps intact.
+const PHOTO_SETS=[
+  // ground first: it fills most of the screen
+  {type:'asphalt',id:'asphalt_02'},
+  {type:'grass',id:'aerial_grass_rock'},
+  {type:'clay',id:'brown_mud'},
+  {type:'gravel',id:'gravel_ground_01',width:3},
+  // buildings
+  {type:'plaster',id:'painted_plaster_wall',width:2},
+  {type:'brick',id:'brick_wall_006',width:3},
+  {type:'blocks',id:'t_concrete_wall_002',width:3},
+  {type:'stone',id:'rock_wall_10',width:1.8},
+  // corrugated roofs (the local maps are painted ribbed metal)
+  {type:'roof_red',id:'box_profile_metal_sheet',width:2},
+  {type:'roof_grey',id:'corrugated_iron_02',width:2.7,metal:.55},
+  {type:'roof_old',id:'corrugated_iron',width:1.1,tint:'#c9cbbf',metal:.35},
+  {type:'roof_green',id:'corrugated_iron_03',width:2,tint:'#4fae9e',metal:.25},
+  {type:'bark',id:'bark_brown_02',width:1}
+];
+function photoResolution(){
+  const phone=matchMedia('(max-width:820px)').matches||matchMedia('(pointer:coarse)').matches;
+  const lowMem=(navigator.deviceMemory||8)<=4;
+  return phone||lowMem?'1k':'2k';
+}
 export async function upgradePhotographic(packs,onStatus) {
-  const requests=[['asphalt','asphalt_02'],['grass','aerial_grass_rock'],['clay','brown_mud']];
-  await Promise.allSettled(requests.map(async([type,id])=>{
+  const res=photoResolution();
+  const queue=[...PHOTO_SETS].filter(r=>packs.maps[r.type]);
+  const worker=async()=>{for(let r;(r=queue.shift());)await upgradeOne(packs,r,res,onStatus);};
+  await Promise.allSettled([worker(),worker(),worker()]);
+}
+async function upgradeOne(packs,{type,id,width,tint,metal},res,onStatus){
     try{
-      const response=await fetch(`https://api.polyhaven.com/files/${id}`,{signal:AbortSignal.timeout(12000)});
+      const response=await fetch(`https://api.polyhaven.com/files/${id}`,{signal:AbortSignal.timeout(15000)});
       if(!response.ok)throw new Error(response.status);
       const files=await response.json();
-      const pick=key=>files[key]?.['2k']?.jpg?.url||files[key]?.['1k']?.jpg?.url;
-      const urls=[pick('diff'),pick('nor_gl'),pick('arm')||pick('rough')];
+      const pick=key=>files[key]?.[res]?.jpg?.url||files[key]?.['1k']?.jpg?.url;
+      const urls=[pick('diff')||pick('Diffuse'),pick('nor_gl'),pick('arm')||pick('rough')];
       if(urls.some(u=>!u))throw new Error('Incomplete material maps');
       const incoming=await Promise.all(urls.map((url,i)=>loader.loadAsync(url).then(t=>configure(t,i===0,packs.anisotropy))));
+      if(width){const [sx,sy]=settings[type];for(const t of incoming)t.repeat.set(sx/width,sy/width);}
       const pack=packs.maps[type];
       pack.map=incoming[0];pack.normalMap=incoming[1];pack.arm=incoming[2];
+      const hasArm=!!pick('arm');
       for(const m of pack.materials){m.map=incoming[0];m.normalMap=incoming[1];m.roughnessMap=incoming[2];
-        if(pick('arm')){m.aoMap=incoming[2];m.aoMap.channel=0;}else m.aoMap=null;
+        if(hasArm){m.aoMap=incoming[2];m.aoMap.channel=0;}else m.aoMap=null;
+        if(tint)m.color.set(tint);
+        if(metal!==undefined){m.metalness=metal;if(hasArm){m.metalnessMap=incoming[2];}}
         m.needsUpdate=true;
       }
       assetStatus.photoSets++;
     }catch(error){assetStatus.photoFailures.push(id);}
     onStatus?.();
-  }));
 }
