@@ -1,5 +1,5 @@
 import {addLandscape} from './landscape.js?v=7';
-import {createGarage} from './garage.js?v=50';
+import {createGarage} from './garage.js?v=51';
 import {createTraffic} from './traffic.js?v=6';
 import {createCows} from './cows.js?v=3';
 import {crumple,repair,createSmoke} from './damage.js?v=1';
