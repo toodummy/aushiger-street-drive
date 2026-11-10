@@ -46,7 +46,7 @@ function bladeGeometry(rand){
     const a=rand()*Math.PI*2,ox=(rand()-.5)*.23,oz=(rand()-.5)*.23,w=.012+rand()*.015,h=.12+rand()*.21;
     const dx=Math.cos(a)*w,dz=Math.sin(a)*w,bend=(rand()-.5)*.16;
     const points=[[ox-dx,0,oz-dz],[ox+dx,0,oz+dz],[ox+dx*.5+bend,h*.58,oz+dz*.5],[ox-dx,0,oz-dz],[ox+dx*.5+bend,h*.58,oz+dz*.5],[ox-dx*.5+bend,h*.58,oz-dz*.5],[ox-dx*.5+bend,h*.58,oz-dz*.5],[ox+dx*.5+bend,h*.58,oz+dz*.5],[ox+bend*1.7,h,oz+.025]];
-    for(const p of points){positions.push(...p);const t=p[1]/h;colors.push(.10+t*.24,.26+t*.34,.035+t*.07);}
+    for(const p of points){positions.push(...p);const t=p[1]/h;colors.push(.21+t*.20,.31+t*.21,.06+t*.08);}
   }
   const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));g.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));g.computeVertexNormals();return g;
 }
@@ -55,8 +55,8 @@ function foliageTexture(rand){
   const c=document.createElement('canvas');c.width=c.height=256;const ctx=c.getContext('2d');
   for(let k=0;k<270;k++){
     const a=rand()*Math.PI*2,r=Math.sqrt(rand())*106,px=128+Math.cos(a)*r,py=128+Math.sin(a)*r*.92;
-    const hue=90+rand()*26,light=24+rand()*24;
-    ctx.fillStyle=`hsl(${hue} 52% ${light}%)`;ctx.beginPath();ctx.ellipse(px,py,3+rand()*5,2+rand()*3,a,0,Math.PI*2);ctx.fill();
+    const hue=82+rand()*18,light=23+rand()*22;
+    ctx.fillStyle=`hsl(${hue} 43% ${light}%)`;ctx.beginPath();ctx.ellipse(px,py,3+rand()*5,2+rand()*3,a,0,Math.PI*2);ctx.fill();
   }
   const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;return t;
 }
