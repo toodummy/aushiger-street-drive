@@ -1,78 +1,9 @@
 import * as THREE from 'three';
 
 
-function make2106(){
- const root=new THREE.Group();
- const mat=(color,roughness=.72,metalness=0)=>new THREE.MeshStandardMaterial({color,roughness,metalness});
- const black=mat(0x17191a,.86), padded=mat(0x292c2e,.87), edge=mat(0x090b0c,.65), red=mat(0x7d1522,.82), chrome=mat(0x9fa5a5,.35,.12), face=mat(0x121819,.8);
- const mesh=(geo,m,x,y,z)=>{let o=new THREE.Mesh(geo,m);o.position.set(x,y,z);root.add(o);return o};
- const box=(w,h,d,x,y,z,m)=>mesh(new THREE.BoxGeometry(w,h,d),m,x,y,z);
- const disk=(r,x,y,z,m)=>mesh(new THREE.CircleGeometry(r,48),m,x,y,z);
- const ring=(r,t,x,y,z,m)=>mesh(new THREE.TorusGeometry(r,t,10,64),m,x,y,z);
- const woodCanvas=document.createElement('canvas');woodCanvas.width=512;woodCanvas.height=128;
- const w=woodCanvas.getContext('2d');w.fillStyle='#603516';w.fillRect(0,0,512,128);
- for(let i=0;i<75;i++){let y=(i*47)%128;w.strokeStyle=i%3===0?'#a97539':'#3a200f';w.globalAlpha=.12+(i%4)*.035;w.lineWidth=i%4===0?2:1;w.beginPath();w.moveTo(0,y);w.bezierCurveTo(140,y+Math.sin(i)*7,340,y-Math.cos(i)*7,512,y+2);w.stroke()}w.globalAlpha=1;
- const woodtex=new THREE.CanvasTexture(woodCanvas);woodtex.colorSpace=THREE.SRGBColorSpace;
- const wood=new THREE.MeshStandardMaterial({map:woodtex,roughness:.43,metalness:.04});
- // Dashboard and the broad veneer strip characteristic of the 2106.
- box(2.2,.29,.30,.39,-.50,-1.00,padded);
- box(2.15,.035,.16,.39,-.335,-1.01,black);
- box(2.04,.12,.035,.38,-.56,-.83,wood);
- box(2.05,.009,.02,.38,-.625,-.806,chrome);
- box(.79,.31,.09,-.04,-.445,-.81,black);
- box(.76,.23,.025,-.04,-.47,-.755,wood);
- function gauge(x,y,r,max,unit){
-  disk(r*1.13,x,y,-.728,edge);ring(r*1.03,.006,x,y,-.716,chrome);disk(r*.96,x,y,-.709,face);
-  const c=document.createElement('canvas');c.width=c.height=256;const ctx=c.getContext('2d');ctx.translate(128,128);
-  ctx.fillStyle='#e2e5de';ctx.strokeStyle='#e5e7dd';ctx.textAlign='center';ctx.textBaseline='middle';ctx.font='bold 17px Arial';ctx.lineWidth=3;
-  for(let i=0;i<=10;i++){const a=Math.PI*.75+i*Math.PI*1.5/10;let sx=Math.cos(a),sy=Math.sin(a);ctx.beginPath();ctx.moveTo(sx*98,sy*98);ctx.lineTo(sx*(i%2?86:78),sy*(i%2?86:78));ctx.stroke();if(!(i%2))ctx.fillText(String(Math.round(max*i/10)),sx*61,sy*61)}
-  ctx.font='12px Arial';ctx.fillText(unit,0,37);ctx.strokeStyle='#e7b49b';ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(7,-5);ctx.lineTo(-48,48);ctx.stroke();ctx.fillStyle='#ddd';ctx.beginPath();ctx.arc(0,0,6,0,7);ctx.fill();
-  const tex=new THREE.CanvasTexture(c);tex.colorSpace=THREE.SRGBColorSpace;const p=mesh(new THREE.PlaneGeometry(r*1.8,r*1.8),new THREE.MeshBasicMaterial({map:tex,transparent:true,depthWrite:false}),x,y,-.700);return p;
- }
- gauge(-.29,-.47,.052,100,'');gauge(-.17,-.47,.052,100,'');gauge(-.055,-.47,.052,100,'');
- gauge(.08,-.45,.096,80,'x100');gauge(.285,-.45,.096,180,'km/h');
- // Two oval top vents, center clock, radio and horizontal heater controls.
- for(let x of [.54,.75]){let outer=ring(.060,.006,x,-.385,-.805,chrome);outer.scale.y=.70;let ins=disk(.053,x,-.385,-.800,edge);ins.scale.y=.70;for(let y of [-.405,-.39,-.375])box(.075,.003,.008,x,y,-.792,chrome)}
- gauge(.65,-.49,.043,12,'');
- box(.40,.105,.04,.65,-.68,-.83,edge);
- for(let y of [-.65,-.67,-.69])box(.32,.005,.012,.65,y,-.802,chrome);
- box(.23,.055,.03,.65,-.765,-.83,black);for(let x of [.56,.62,.68,.74])disk(.014,x,-.765,-.807,chrome);
- // Thin, near-circular two-spoke steering wheel with a long horn bar.
- const wheel=new THREE.Group();wheel.position.set(0,-.48,-.49);root.add(wheel);
- let wr=new THREE.Mesh(new THREE.TorusGeometry(.265,.012,12,96),edge);wheel.add(wr);
- let wr2=new THREE.Mesh(new THREE.TorusGeometry(.251,.003,8,96),chrome);wr2.position.z=.007;wheel.add(wr2);
- let horn=new THREE.Mesh(new THREE.BoxGeometry(.43,.055,.035),chrome);horn.position.set(0,0,.012);wheel.add(horn);
- let hornpad=new THREE.Mesh(new THREE.BoxGeometry(.30,.044,.042),black);hornpad.position.set(0,0,.03);wheel.add(hornpad);
- let emblem=new THREE.Mesh(new THREE.BoxGeometry(.038,.034,.008),chrome);emblem.position.set(0,0,.056);wheel.add(emblem);
- // Red door trim; the roof, pillars and rear window come from the car's own cabin shell.
- // Light perforated headliner under the shell's roof, front to rear window.
- box(1.42,.02,2.35,.17,.405,.25,mat(0xc9c2b0,.95));
- box(.08,.56,1.35,-.92,-.58,-.20,red);box(.08,.56,1.35,1.25,-.58,-.20,red);
- box(.09,.08,1.35,-.92,-.30,-.20,black);box(.09,.08,1.35,1.25,-.30,-.20,black);
- for(let y of [-.43,-.53,-.63]){box(.012,.006,1.13,-.873,y,-.20,chrome);box(.012,.006,1.13,1.203,y,-.20,chrome)}
- // Upholstered floor and transmission tunnel.
- const carpet=mat(0x68111c,.98);
- box(2.05,.08,2.25,.16,-1.08,-.10,carpet);
- box(2.15,.66,.07,.19,-.85,-.91,carpet);
- box(.28,.20,1.35,.36,-.96,-.20,black);
- // Seats come from the car model (red velour, restyled in seats.js), so the rear bench stays in view.
- // Console, gear lever and pedal set.
- box(.36,.24,.22,.59,-.80,-.75,black);
- const lever=box(.035,.28,.035,.45,-.83,-.49,chrome);lever.rotation.x=-.22;
- mesh(new THREE.SphereGeometry(.055,24,16),edge,.45,-.69,-.52);
- for(let px of [-.24,-.09,.07]){const pedal=box(.085,.16,.025,px,-.96,-.79,edge);pedal.rotation.x=-.18}
- // Extend the red door and its window frame to meet the dash and roof.
- box(.10,.54,.45,-.91,-.57,-.88,red);
- box(.10,.075,.47,-.91,-.30,-.88,black);
- const sill=box(.09,.10,1.85,-.91,-.88,-.15,black);
- wheel.traverse(o=>{if(o.isMesh){o.material=o.material.clone();o.material.depthTest=false;o.material.depthWrite=false;o.renderOrder=100;}});
- return root;
-}
-
 // Compact, model-specific cockpit detail for the driver's view.
 export function makeCockpit(isKalina, is2106=false, isPolo=false) {
- if(is2106)return make2106();
- if(isPolo)return new THREE.Group();   // the Polo, 2107 and Kalina carry their own modelled interiors
+ if(isPolo)return new THREE.Group();   // all built-in cars carry their own modelled interiors
  const root=new THREE.Group();
  const plastic=new THREE.MeshStandardMaterial({color:isKalina?0x383b3c:0x222321,roughness:.87});
  const dark=new THREE.MeshStandardMaterial({color:0x101211,roughness:.78});
