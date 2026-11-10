@@ -69,6 +69,18 @@
  details{margin-top:8px;padding-top:8px}
 }
 @media(max-height:500px){header{max-height:calc(100dvh - 90px)}}
+
+/* car condition readout */
+.condition{display:flex;flex-direction:column;align-items:center;justify-content:center;padding-left:12px;margin-left:10px;border-left:1px solid #ffffff22;min-width:44px}
+.condition span{font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:#a9b4ad}
+.condition b{font-size:14px;color:#9fe3a8;font-weight:700}
+.condition.hurt b{color:#f0c060}.condition.wrecked b{color:#ff6b5a}
+/* phones: holding a control must not start text selection or the copy/look-up menu */
+footer,footer *,#menu-toggle,header button{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:manipulation}
+
+#wrecked-msg{position:fixed;z-index:4;left:50%;top:38%;transform:translate(-50%,-50%);padding:16px 22px;border-radius:14px;border:1px solid #ff6b5a88;background:#1b1514e8;color:#ffd9d2;font-size:15px;font-weight:700;letter-spacing:.02em;box-shadow:0 10px 40px #0008;backdrop-filter:blur(8px);max-width:80vw}
+#wrecked-msg[hidden]{display:none}
+@media(max-width:650px){.condition{margin-left:2px;padding-left:7px;min-width:0}.condition span{font-size:8px;letter-spacing:.08em}.condition b{font-size:12px}.route-info{min-width:62px;flex:1 1 auto}.dashboard{gap:6px}}
 </style>
 </head>
 <body>
@@ -82,9 +94,10 @@
   <details id="about"><summary>Controls & scene details</summary><p><b>W / S</b> accelerate and brake · <b>A / D</b> steer<br><b>Space</b> cruise · <b>R</b> restart · <b>F</b> centre view<br><b>V</b> free camera · <b>Q / E</b> down / up · <b>Shift</b> faster<br><b>Mouse</b> look · <b>Wheel</b> zoom · <b>Esc</b> release mouse</p><label class="select-row">Graphics <select id="quality"><option value="high">High · ambient occlusion</option><option value="balanced" selected>Balanced · faster</option></select></label><p class="accuracy">Reconstructed from your street references. Terrain, distances and unseen buildings are inferred; this is not an exact digital survey.</p><p id="asset-status"></p><p><a href="https://polyhaven.com" target="_blank" rel="noopener">Powered by Poly Haven</a> · CC0 photographic materials</p><output id="diagnostics" hidden></output></details>
 </header>
 <button id="menu-toggle" type="button" aria-controls="hud-menu" aria-expanded="true" title="Hide menu (M)"><span class="mt-icon" aria-hidden="true">✕</span><span class="mt-text">Hide</span></button>
+<button id="wrecked-msg" type="button" hidden>Car wrecked — tap here to repair and drive on</button>
 <div id="look-hint">Click the scene to look around</div><div id="reticle" aria-hidden="true"></div>
 <footer>
-  <div class="dashboard panel"><div class="speed"><strong id="speed">0</strong><span>km/h</span></div><div class="route-info"><span id="segment">North entrance</span><small id="distance">0 / 1,500 m</small><div class="track"><i id="route-progress"></i></div></div><span id="fps"></span></div>
+  <div class="dashboard panel"><div class="speed"><strong id="speed">0</strong><span>km/h</span></div><div class="route-info"><span id="segment">North entrance</span><small id="distance">0 / 1,500 m</small><div class="track"><i id="route-progress"></i></div></div><div class="condition" title="Car condition"><span>Car</span><b id="damage">100%</b></div><span id="fps"></span></div>
   <div class="touch-controls panel"><button data-key="KeyA" aria-label="Steer left">←</button><button data-key="KeyS">Brake</button><button data-key="KeyW">Go</button><button data-key="KeyD" aria-label="Steer right">→</button></div>
 </footer>
 <section id="garage" role="dialog" aria-modal="true" aria-labelledby="garage-title" hidden>
@@ -106,7 +119,7 @@
  </div></section>
 <div id="load"><div class="loading-card"><h2 class="load-title" aria-label="Go To Aushiger VII"><span aria-hidden="true"><b>G</b><i>o</i> <b>T</b><i>o</i> <b>A</b><i>ushiger</i> <b class="num">VII</b></span></h2><div class="load-city"><span class="city-name">Aushiger City</span></div><p id="progress">Preparing your drive</p><div class="loading-track"><i id="loadbar"></i></div><button id="retry" hidden>Reload</button></div></div>
 <script type="module">
-import('./app-v3.js?v=42').catch(error=>{
+import('./app-v3.js?v=53').catch(error=>{
   console.error(error);
   const progress=document.querySelector('#progress');
   if(progress)progress.textContent='Unable to start: '+error.message;

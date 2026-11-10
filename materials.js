@@ -22,7 +22,7 @@ function family(n) {
   if (/asphalt|road repairs/i.test(n)) return 'asphalt';
   if (/spring grass|valley vegetation/i.test(n)) return 'grass';
   if (/exposed hillside/i.test(n)) return 'clay';
-  if (/gravel and dust/i.test(n)) return 'gravel';
+  if (/gravel and dust/i.test(n)) return 'grass'; // road shoulders: grass, not dirt
   if (/old yellow red brick/i.test(n)) return 'brick';
   if (/concrete blocks/i.test(n)) return 'blocks';
   if (/limestone|gabion stone/i.test(n)) return 'stone';
@@ -75,9 +75,16 @@ function macroVariation(m, type) {
     let code = '';
     if(type==='grass') code=`
       float macro=terrainNoise(vSurfaceWorld.xz*.045)*.65+terrainNoise(vSurfaceWorld.xz*.31)*.35;
-      diffuseColor.rgb *= mix(vec3(.68,.77,.60),vec3(1.17,1.15,.91),macro);
-      float dry=smoothstep(.70,.88,terrainNoise(vSurfaceWorld.xz*.18));
-      diffuseColor.rgb=mix(diffuseColor.rgb,diffuseColor.rgb*vec3(1.26,1.01,.76),dry*.6);`;
+      diffuseColor.rgb *= mix(vec3(.72,.80,.62),vec3(1.15,1.16,.90),macro);
+      float dry=smoothstep(.74,.90,terrainNoise(vSurfaceWorld.xz*.18));
+      diffuseColor.rgb=mix(diffuseColor.rgb,diffuseColor.rgb*vec3(1.22,1.01,.78),dry*.35);
+      // gentle late-spring push: multiply toward green so the photo detail stays
+      diffuseColor.rgb=mix(diffuseColor.rgb,diffuseColor.rgb*vec3(.86,1.16,.70),.7);`;
+    if(type==='gravel') code=`
+      // grass growing through the dusty shoulders in patches
+      float tuft=smoothstep(.42,.70,terrainNoise(vSurfaceWorld.xz*.55)*.6+terrainNoise(vSurfaceWorld.xz*2.3)*.4);
+      vec3 green=diffuseColor.rgb*vec3(.55,.85,.38);
+      diffuseColor.rgb=mix(diffuseColor.rgb,green,tuft*.65);`;
     if(type==='asphalt') code=`
       float weather=terrainNoise(vSurfaceWorld.xz*.3);
       diffuseColor.rgb*=.91+.18*weather;`;
@@ -86,7 +93,7 @@ function macroVariation(m, type) {
       diffuseColor.rgb*=.85+.19*stain;`;
     shader.fragmentShader=shader.fragmentShader.replace('#include <color_fragment>','#include <color_fragment>\n'+code);
   };
-  m.customProgramCacheKey=()=>`aushiger-surface-${type}-3`;
+  m.customProgramCacheKey=()=>`aushiger-surface-${type}-4`;
 }
 
 export async function textureWorld(root, renderer, onProgress) {
@@ -121,11 +128,11 @@ export async function textureWorld(root, renderer, onProgress) {
         else if(/concrete/i.test(m.name))m.color.set('#aaa99c');
         else m.color.set('#f2f1e8');
       } else m.color.set('#ffffff');
-      if(t==='grass')m.color.set('#b4cc9b');
+      if(t==='grass')m.color.set(/gravel/i.test(m.name)?'#7fb456':'#b4cc9b'); // shoulders: green verges
       if(t==='asphalt'&&/repairs/i.test(m.name))m.color.set('#939591');
       if(t==='metal'){m.metalness=.78;m.roughness=.65;}
       if(t==='leaf'){m.side=THREE.DoubleSide;m.shadowSide=THREE.DoubleSide;}
-      if(['grass','asphalt','plaster','brick','blocks'].includes(t))macroVariation(m,t);
+      if(['grass','gravel','asphalt','plaster','brick','blocks'].includes(t))macroVariation(m,t);
       pack.materials.push(m);m.needsUpdate=true;
     }
   });
@@ -133,26 +140,58 @@ export async function textureWorld(root, renderer, onProgress) {
 }
 
 // Optional photographic maps upgrade the already working local materials.
-// The public API supplies current, authoritative URLs. Failure leaves local maps intact.
+// Every surface family gets a matching CC0 Poly Haven scan, loaded in the player's browser.
+// width = the scan's real-world width in metres, so bricks, tiles and gravel keep true size.
+// Phones and low-memory devices get 1K maps, everything else 2K. Failure leaves local maps intact.
+const PHOTO_SETS=[
+  // ground first: it fills most of the screen
+  {type:'asphalt',id:'asphalt_02'},
+  {type:'grass',id:'aerial_grass_rock'},
+  {type:'clay',id:'brown_mud'},
+  {type:'gravel',id:'gravel_ground_01',width:3},
+  // buildings
+  {type:'plaster',id:'painted_plaster_wall',width:2},
+  {type:'brick',id:'brick_wall_006',width:3},
+  {type:'blocks',id:'t_concrete_wall_002',width:3},
+  {type:'stone',id:'rock_wall_10',width:1.8},
+  // corrugated roofs (the local maps are painted ribbed metal)
+  {type:'roof_red',id:'box_profile_metal_sheet',width:2},
+  {type:'roof_grey',id:'corrugated_iron_02',width:2.7,metal:.55},
+  {type:'roof_old',id:'corrugated_iron',width:1.1,tint:'#c9cbbf',metal:.35},
+  {type:'roof_green',id:'corrugated_iron_03',width:2,tint:'#4fae9e',metal:.25},
+  {type:'bark',id:'bark_brown_02',width:1}
+];
+function photoResolution(){
+  const phone=matchMedia('(max-width:820px)').matches||matchMedia('(pointer:coarse)').matches;
+  const lowMem=(navigator.deviceMemory||8)<=4;
+  return phone||lowMem?'1k':'2k';
+}
 export async function upgradePhotographic(packs,onStatus) {
-  const requests=[['asphalt','asphalt_02'],['grass','aerial_grass_rock'],['clay','brown_mud']];
-  await Promise.allSettled(requests.map(async([type,id])=>{
+  const res=photoResolution();
+  const queue=[...PHOTO_SETS].filter(r=>packs.maps[r.type]);
+  const worker=async()=>{for(let r;(r=queue.shift());)await upgradeOne(packs,r,res,onStatus);};
+  await Promise.allSettled([worker(),worker(),worker()]);
+}
+async function upgradeOne(packs,{type,id,width,tint,metal},res,onStatus){
     try{
-      const response=await fetch(`https://api.polyhaven.com/files/${id}`,{signal:AbortSignal.timeout(12000)});
+      const response=await fetch(`https://api.polyhaven.com/files/${id}`,{signal:AbortSignal.timeout(15000)});
       if(!response.ok)throw new Error(response.status);
       const files=await response.json();
-      const pick=key=>files[key]?.['2k']?.jpg?.url||files[key]?.['1k']?.jpg?.url;
-      const urls=[pick('diff'),pick('nor_gl'),pick('arm')||pick('rough')];
+      const pick=key=>files[key]?.[res]?.jpg?.url||files[key]?.['1k']?.jpg?.url;
+      const urls=[pick('diff')||pick('Diffuse'),pick('nor_gl'),pick('arm')||pick('rough')];
       if(urls.some(u=>!u))throw new Error('Incomplete material maps');
       const incoming=await Promise.all(urls.map((url,i)=>loader.loadAsync(url).then(t=>configure(t,i===0,packs.anisotropy))));
+      if(width){const [sx,sy]=settings[type];for(const t of incoming)t.repeat.set(sx/width,sy/width);}
       const pack=packs.maps[type];
       pack.map=incoming[0];pack.normalMap=incoming[1];pack.arm=incoming[2];
+      const hasArm=!!pick('arm');
       for(const m of pack.materials){m.map=incoming[0];m.normalMap=incoming[1];m.roughnessMap=incoming[2];
-        if(pick('arm')){m.aoMap=incoming[2];m.aoMap.channel=0;}else m.aoMap=null;
+        if(hasArm){m.aoMap=incoming[2];m.aoMap.channel=0;}else m.aoMap=null;
+        if(tint)m.color.set(tint);
+        if(metal!==undefined){m.metalness=metal;if(hasArm){m.metalnessMap=incoming[2];}}
         m.needsUpdate=true;
       }
       assetStatus.photoSets++;
     }catch(error){assetStatus.photoFailures.push(id);}
     onStatus?.();
-  }));
 }
