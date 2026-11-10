@@ -1,7 +1,7 @@
 import {addLandscape} from './landscape.js?v=7';
 import {createGarage} from './garage.js?v=42';
-import {createTraffic} from './traffic.js?v=2';
-import {createCows} from './cows.js?v=2';
+import {createTraffic} from './traffic.js?v=3';
+import {createCows} from './cows.js?v=3';
 import {crumple,repair,createSmoke} from './damage.js?v=1';
 import * as THREE from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
@@ -9,10 +9,10 @@ import {EffectComposer} from 'three/addons/postprocessing/EffectComposer.js';
 import {RenderPass} from 'three/addons/postprocessing/RenderPass.js';
 import {SSAOPass} from 'three/addons/postprocessing/SSAOPass.js';
 import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
-import {textureWorld,upgradePhotographic,assetStatus} from './materials.js?v=8';
+import {textureWorld,upgradePhotographic,assetStatus} from './materials.js?v=9';
 import {lightWorld} from './environment.js?v=6';
 import {enrichWorld,batchTrees} from './detail.js?v=6';
-import {createDriveState,stepDrive,mouseLook,clamp,START} from './driving.js?v=9';
+import {createDriveState,stepDrive,mouseLook,clamp,START} from './driving.js?v=10';
 
 const $=s=>document.querySelector(s);
 let renderer;
@@ -72,7 +72,8 @@ function updateControls(){
 }
 function takeHit({point,dir,amount}){state.damage=Math.min(1,(state.damage||0)+amount);crumple(garage?.carRoot,point,dir,.95,.1+amount*.5);shake=Math.max(shake,.25+amount);updateDamage();}
 document.querySelector('footer')?.addEventListener('contextmenu',e=>e.preventDefault());
-let shake=0;function updateDamage(){const el=document.getElementById('damage');if(!el)return;const ok=Math.round((1-(state.damage||0))*100);el.textContent=ok+'%';el.parentElement.classList.toggle('hurt',ok<70);el.parentElement.classList.toggle('wrecked',ok<35);}
+let shake=0;function updateDamage(){const el=document.getElementById('damage');if(!el)return;const ok=Math.round((1-(state.damage||0))*100);el.textContent=ok+'%';el.parentElement.classList.toggle('hurt',ok<70);el.parentElement.classList.toggle('wrecked',ok<35);const w=document.getElementById('wrecked-msg');if(w)w.hidden=ok>0;}
+document.getElementById('wrecked-msg')?.addEventListener('click',()=>reset(state.distance));
 function reset(distance=START){repair(garage?.carRoot);Object.assign(state,createDriveState(),{distance:Math.max(START,distance)});updateDamage();keys.clear();camera.fov=68;camera.updateProjectionMatrix();pose();updateControls();}
 function toggleFree(){
   if(!ready)return;

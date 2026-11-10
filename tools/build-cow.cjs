@@ -3,7 +3,8 @@
 // Each moving part is its own node so the game can animate it: Body, Neck (with head), Tail,
 // four upper legs and four lower legs, plus horns. Every vertex also stores its rest-pose
 // position in cow space (_COWPOS) so the coat pattern stays continuous across parts.
-// Run: npm i isosurface@1.0.0 && node tools/build-cow.cjs   (front of the cow = -Z, metres)
+// Run: npm i isosurface@1.0.0 && node tools/build-cow.cjs models/cow.glb && COARSE=2.4 node tools/build-cow.cjs models/cow-far.glb
+//   (front of the cow = -Z, metres)
 const {surfaceNets}=require('isosurface');
 const fs=require('fs');
 
@@ -82,7 +83,8 @@ const PARTS=[
   ['HindLowerL',hindLower,[[-.09,-.56,-.2],[.09,.06,.08]],.015,'HindLowerL'],['HindLowerR',hindLower,[[-.09,-.56,-.2],[.09,.06,.08]],.015,'HindLowerR']
 ];
 
-function build([name,f,bounds,step,pivotName]){
+const COARSE=Number(process.env.COARSE||1); // e.g. COARSE=2.4 builds the distant (low-detail) cow
+function build([name,f,bounds,step0,pivotName]){const step=step0*COARSE;
   const dims=[0,1,2].map(i=>Math.ceil((bounds[1][i]-bounds[0][i])/step));
   const m=surfaceNets(dims,(x,y,z)=>f([x,y,z]),bounds);
   // relax a little (Taubin smoothing) then project normals from the SDF gradient

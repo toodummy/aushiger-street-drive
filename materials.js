@@ -22,7 +22,7 @@ function family(n) {
   if (/asphalt|road repairs/i.test(n)) return 'asphalt';
   if (/spring grass|valley vegetation/i.test(n)) return 'grass';
   if (/exposed hillside/i.test(n)) return 'clay';
-  if (/gravel and dust/i.test(n)) return 'gravel';
+  if (/gravel and dust/i.test(n)) return 'grass'; // road shoulders: grass, not dirt
   if (/old yellow red brick/i.test(n)) return 'brick';
   if (/concrete blocks/i.test(n)) return 'blocks';
   if (/limestone|gabion stone/i.test(n)) return 'stone';
@@ -128,7 +128,7 @@ export async function textureWorld(root, renderer, onProgress) {
         else if(/concrete/i.test(m.name))m.color.set('#aaa99c');
         else m.color.set('#f2f1e8');
       } else m.color.set('#ffffff');
-      if(t==='grass')m.color.set('#b4cc9b');
+      if(t==='grass')m.color.set(/gravel/i.test(m.name)?'#7fb456':'#b4cc9b'); // shoulders: green verges
       if(t==='asphalt'&&/repairs/i.test(m.name))m.color.set('#939591');
       if(t==='metal'){m.metalness=.78;m.roughness=.65;}
       if(t==='leaf'){m.side=THREE.DoubleSide;m.shadowSide=THREE.DoubleSide;}

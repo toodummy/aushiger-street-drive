@@ -6,7 +6,7 @@ import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 // across the road, graze, lift the tail to drop a pat or take a leak, step aside for cars, and die
 // if you hit them fast: the cow is thrown, falls on its side and stays on the road.
 // Positions are route coordinates: d = metres along the road, lat = metres right of centre.
-const MAX_PATS=40,MAX_PUDDLES=10,MAX_COWS=5;
+const MAX_PATS=40,MAX_PUDDLES=10,MAX_COWS=8,FAR=32; // beyond FAR metres a light version of the cow is drawn
 const COATS=[
   {base:'#5b3521',patch:'#efe6da',spots:.38},  // brown and white (Simmental-like)
   {base:'#f2eee6',patch:'#17130f',spots:.52},  // Holstein black and white
@@ -71,9 +71,9 @@ const mats={
   puddle:new THREE.MeshStandardMaterial({color:'#b59836',roughness:.06,metalness:.1,transparent:true,opacity:.5,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-2})
 };
 
-let templatePromise=null;
-function loadTemplate(){
-  return templatePromise||=new GLTFLoader().loadAsync('./models/cow.glb?v=1').then(g=>{
+const templatePromises={};
+function loadTemplate(url){
+  return templatePromises[url]||=new GLTFLoader().loadAsync(url).then(g=>{
     const root=g.scene;root.updateMatrixWorld(true);
     // rest-pose cow-space positions, so the coat pattern flows across the separate parts
     root.traverse(o=>{if(!o.isMesh)return;const p=o.geometry.attributes.position,a=new Float32Array(p.count*3),v=new THREE.Vector3();
@@ -83,9 +83,11 @@ function loadTemplate(){
   });
 }
 
-function buildCow(template,i){
+function buildCow(template,i,farTemplate){
   const coat=COATS[i%COATS.length],hide=coatMaterial(coat,i*3.7+.5);
   const model=template.clone(true);
+  let far=null;
+  if(farTemplate){far=farTemplate.clone(true);far.traverse(o=>{if(o.isMesh){o.castShadow=true;if(o.material.name==='Hide')o.material=hide;}});far.visible=false;}
   model.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;if(o.material.name==='Hide')o.material=hide;}});
   const part=n=>model.getObjectByName(n);
   const neck=part('Neck');
@@ -93,15 +95,17 @@ function buildCow(template,i){
   const legs=[['FrontUpperL','FrontLowerL',0,1],['FrontUpperR','FrontLowerR',Math.PI,1],['HindUpperL','HindLowerL',Math.PI,-1],['HindUpperR','HindLowerR',0,-1]]
     .map(([u,l,phase,front])=>({upper:part(u),lower:part(l),phase,front}));
   const stream=new THREE.Mesh(extra.stream,mats.stream);stream.position.set(0,1.06,1.02);stream.visible=false;model.add(stream);
-  const holder=new THREE.Group();holder.name='Village cow';holder.add(model);
-  return {obj:holder,model,body:model,neck,tail:part('Tail'),legs,stream};
+  const holder=new THREE.Group();holder.name='Village cow';holder.add(model);if(far)holder.add(far);
+  const farParts=far&&{model:far,neck:far.getObjectByName('Neck'),tail:far.getObjectByName('Tail'),legs:legs.map(l=>({upper:far.getObjectByName(l.upper.name),lower:far.getObjectByName(l.lower.name)}))};
+  return {obj:holder,model,body:model,neck,tail:part('Tail'),legs,stream,farParts};
 }
 
 export function createCows(scene,sample,{onHit}={}){
   const cows=[],pats=[],puddles=[],up=new THREE.Vector3(0,1,0);
   const a=new THREE.Vector3(),b=new THREE.Vector3(),fwd=new THREE.Vector3(),right=new THREE.Vector3(),m4=new THREE.Matrix4();
-  let herdClock=1,built=0,template=null;
-  loadTemplate().then(t=>template=t).catch(e=>console.warn('Cow model failed',e));
+  let herdClock=.5,built=0,template=null,farTemplate=null,first=true;
+  const load=(tries=0)=>loadTemplate('./models/cow.glb?v=2').then(t=>template=t).catch(e=>{console.warn('Cow model failed',e);if(tries<3)setTimeout(()=>load(tries+1),3000);});
+  load();loadTemplate('./models/cow-far.glb?v=1').then(t=>farTemplate=t).catch(()=>{});
   const rnd=(x,y)=>x+Math.random()*(y-x);
   function frame(d){a.copy(sample(d));b.copy(sample(d+1));fwd.copy(b).sub(a).normalize();right.crossVectors(fwd,up).normalize();return a;}
   function world(d,lat,out=new THREE.Vector3()){frame(d);return out.copy(a).addScaledVector(right,lat);}
@@ -109,10 +113,19 @@ export function createCows(scene,sample,{onHit}={}){
     const n=2+Math.floor(Math.random()*3);
     for(let k=0;k<n;k++){
       let c=cows.find(c=>!c.active);
-      if(!c){if(cows.length>=MAX_COWS)break;const m=buildCow(template,built++);scene.add(m.obj);c={...m};cows.push(c);}
+      if(!c){if(cows.length>=MAX_COWS)break;const m=buildCow(template,built++,farTemplate);scene.add(m.obj);c={...m};cows.push(c);}
       Object.assign(c,{active:true,dead:false,d:center+rnd(-18,18),lat:rnd(-4.5,4.5),heading:Math.random()*Math.PI*2,speed:0,state:'walk',timer:rnd(2,6),walk:Math.random()*6,acted:0,patDone:false,turn:rnd(-.3,.3),puddle:null,fall:0,vd:0,vl:0,spin:0,side:1,deadAge:0});
       c.model.position.set(0,0,0);c.model.rotation.set(0,0,0);c.obj.visible=true;
     }
+  }
+  // the light distant model copies the near model's pose; only one of them is drawn
+  function syncFar(c,player){
+    const f=c.farParts;if(!f)return;
+    const far=Math.abs(c.d-player.distance)>FAR;
+    c.model.visible=!far;f.model.visible=far;if(!far)return;
+    f.model.position.copy(c.model.position);f.model.rotation.copy(c.model.rotation);
+    f.neck.rotation.copy(c.neck.rotation);f.tail.rotation.copy(c.tail.rotation);
+    c.legs.forEach((l,i)=>{f.legs[i].upper.rotation.copy(l.upper.rotation);f.legs[i].lower.rotation.copy(l.lower.rotation);});
   }
   function dropPat(c){
     const p=c.model.localToWorld(new THREE.Vector3(0,1.08,1.06));
@@ -143,8 +156,10 @@ export function createCows(scene,sample,{onHit}={}){
       dt=Math.min(dt,.05);if(!template)return;
       herdClock-=dt;
       if(herdClock<=0){
-        if(cows.filter(c=>c.active&&!c.dead&&c.d>player.distance-20).length<2){const center=player.distance+rnd(110,320);if(center<1460)spawnHerd(center);}
-        herdClock=rnd(6,12);
+        // keep about two herds on the road ahead; the very first one close to the start
+        const ahead=cows.filter(c=>c.active&&!c.dead&&c.d>player.distance-10);
+        if(ahead.length<4){const furthest=Math.max(player.distance,...ahead.map(c=>c.d));const center=first?player.distance+rnd(70,110):Math.max(player.distance+90,furthest+rnd(60,150));if(center<1460){spawnHerd(center);first=false;}}
+        herdClock=rnd(3,7);
       }
       const t=performance.now()/1000;
       for(const c of cows){
@@ -161,6 +176,7 @@ export function createCows(scene,sample,{onHit}={}){
           c.deadAge+=dt;
           const p=world(c.d,c.lat),dir=fwd.clone().multiplyScalar(Math.cos(c.heading)).addScaledVector(right,Math.sin(c.heading));
           m4.lookAt(p,p.clone().add(dir),up);c.obj.position.copy(p);c.obj.quaternion.setFromRotationMatrix(m4);
+          syncFar(c,player);
           if(c.d<player.distance-90||c.deadAge>120){c.active=false;c.obj.visible=false;}
           continue;
         }
@@ -208,6 +224,7 @@ export function createCows(scene,sample,{onHit}={}){
         if(c.state!=='poop'&&c.state!=='pee')c.patDone=c.patDone&&Math.random()>dt*.02;
         c.neck.rotation.x+=(neckTarget-c.neck.rotation.x)*Math.min(1,dt*3);
         c.tail.rotation.x+=(tailX-c.tail.rotation.x)*Math.min(1,dt*5);c.tail.rotation.z+=(tailZ-c.tail.rotation.z)*Math.min(1,dt*4);
+        syncFar(c,player);
         if(c.d<player.distance-90||c.d<2||c.d>1495){c.active=false;c.obj.visible=false;c.stream.visible=false;}
       }
       for(const pat of pats){const u=pat.userData;if(u.landed)continue;u.vy-=9.8*dt;pat.position.y+=u.vy*dt;pat.scale.setScalar(Math.min(1,pat.scale.x+dt*2));if(pat.position.y<=u.ground){pat.position.y=u.ground;u.landed=true;pat.scale.set(1.1,.85,1.1);}}

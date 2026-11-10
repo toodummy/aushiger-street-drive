@@ -136,7 +136,7 @@ export function createTraffic(scene,sample,{onPlayerHit}={}){
             const vMid=(player.speed+vOther)/2;
             player.speed=vMid-side*closing*.12;player.cruise=false;
             c.speed=Math.max(0,(vMid+side*closing*.12)*c.dir);
-            c.damage=Math.min(1,c.damage+amount);c.cruise=c.baseCruise*(1-.65*c.damage);if(c.damage>.85)c.cruise=0;
+            c.damage=Math.min(1,c.damage+amount);c.cruise=c.damage>=.999?0:c.baseCruise*(.25+.75*(1-c.damage));
             const a=sample((player.distance+c.d)/2);fwd.copy(sample((player.distance+c.d)/2+1)).sub(a).normalize();right.crossVectors(fwd,up).normalize();
             const point=a.clone().addScaledVector(right,(player.lateral+c.lat)/2);point.y+=.6;
             const intoCar=fwd.clone().multiplyScalar(-side);
