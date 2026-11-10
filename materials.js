@@ -2,7 +2,7 @@ import * as THREE from 'three';
 
 const loader = new THREE.TextureLoader();
 const settings = {
-  asphalt: [3, 3, .42], gravel: [2, 2, .8], grass: [3.5, 3.5, .7],
+  asphalt: [3, 3, .75], gravel: [2, 2, .8], grass: [3.5, 3.5, .85],
   clay: [3, 3, 1.1], stone: [1.2, 1.2, .7], plaster: [2, 2, .3],
   brick: [1.5, 1.02, .8], blocks: [2.1, 1.32, .65],
   roof_red: [2.4, 2.4, .8], roof_grey: [2.4, 2.4, .7],
@@ -59,7 +59,13 @@ function uvProject(mesh, type) {
   g.userData.projected=true;
 }
 
-function macroVariation(m, type) {
+// Surface shader: (1) breaks visible tiling by blending two randomly shifted copies of every map,
+// chosen by a slow noise over the surface (no more identical cracks every few metres);
+// (2) adds large-scale colour variation; (3) grades grass to fresh spring green.
+const NO_TILE=['asphalt','grass','clay','gravel','stone','plaster','brick','blocks','roof_red','roof_grey','roof_old','roof_green','bark'];
+function chunk(name,sampler,uv){return THREE.ShaderChunk[name].split(`texture2D( ${sampler}, ${uv} )`).join(`texNoTile( ${sampler}, ${uv} )`);}
+function surfaceShader(m, type) {
+  const noTile=NO_TILE.includes(type);
   m.onBeforeCompile = shader => {
     shader.vertexShader = shader.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vSurfaceWorld;');
     shader.vertexShader = shader.vertexShader.replace('#include <project_vertex>', `#include <project_vertex>
@@ -71,22 +77,47 @@ function macroVariation(m, type) {
     shader.fragmentShader = shader.fragmentShader.replace('#include <common>', `#include <common>
       varying vec3 vSurfaceWorld;
       float terrainHash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
-      float terrainNoise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.0-2.0*f);return mix(mix(terrainHash(i),terrainHash(i+vec2(1,0)),f.x),mix(terrainHash(i+vec2(0,1)),terrainHash(i+1.0),f.x),f.y);}`);
+      float terrainNoise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.0-2.0*f);return mix(mix(terrainHash(i),terrainHash(i+vec2(1,0)),f.x),mix(terrainHash(i+vec2(0,1)),terrainHash(i+1.0),f.x),f.y);}
+      vec4 texNoTile(sampler2D s, vec2 uv){
+        float k=terrainNoise(uv*.55)*.7+terrainNoise(uv*1.9+17.0)*.3;
+        vec2 dx=dFdx(uv), dy=dFdy(uv);
+        float l=k*9.0, i=floor(l), f=fract(l);
+        vec2 oa=sin(vec2(3.0,7.0)*i), ob=sin(vec2(3.0,7.0)*(i+1.0));
+        vec4 a=textureGrad(s,uv+oa,dx,dy), b=textureGrad(s,uv+ob,dx,dy);
+        return mix(a,b,smoothstep(.2,.8,f-.1*dot(a.rgb-b.rgb,vec3(1.0))));
+      }`);
+    if(noTile){
+      shader.fragmentShader=shader.fragmentShader
+        .replace('#include <map_fragment>',chunk('map_fragment','map','vMapUv'))
+        .replace('#include <normal_fragment_maps>',chunk('normal_fragment_maps','normalMap','vNormalMapUv'))
+        .replace('#include <roughnessmap_fragment>',chunk('roughnessmap_fragment','roughnessMap','vRoughnessMapUv'))
+        .replace('#include <metalnessmap_fragment>',chunk('metalnessmap_fragment','metalnessMap','vMetalnessMapUv'))
+        .replace('#include <aomap_fragment>',chunk('aomap_fragment','aoMap','vAoMapUv'));
+    }
     let code = '';
     if(type==='grass') code=`
+      float lum=dot(diffuseColor.rgb,vec3(.299,.587,.114));
+      vec3 spring=mix(vec3(.042,.105,.016),vec3(.25,.43,.09),smoothstep(.015,.30,lum));
       float macro=terrainNoise(vSurfaceWorld.xz*.045)*.65+terrainNoise(vSurfaceWorld.xz*.31)*.35;
-      diffuseColor.rgb *= mix(vec3(.68,.77,.60),vec3(1.17,1.15,.91),macro);
-      float dry=smoothstep(.70,.88,terrainNoise(vSurfaceWorld.xz*.18));
-      diffuseColor.rgb=mix(diffuseColor.rgb,diffuseColor.rgb*vec3(1.26,1.01,.76),dry*.6);`;
+      spring*=mix(vec3(.84,.92,.80),vec3(1.12,1.08,.90),macro);
+      float meadow=smoothstep(.62,.85,terrainNoise(vSurfaceWorld.xz*.07+5.0));
+      spring=mix(spring,spring*vec3(1.18,1.10,.72),meadow*.45);
+      float soil=smoothstep(.78,.93,terrainNoise(vSurfaceWorld.xz*.16));
+      diffuseColor.rgb=mix(spring,diffuseColor.rgb*vec3(1.0,.95,.82),.12+soil*.3);`;
+    if(type==='clay') code=`
+      float green=smoothstep(.35,.7,terrainNoise(vSurfaceWorld.xz*.09));
+      diffuseColor.rgb=mix(diffuseColor.rgb,diffuseColor.rgb*vec3(.72,1.05,.55),green*.55);`;
     if(type==='asphalt') code=`
-      float weather=terrainNoise(vSurfaceWorld.xz*.3);
-      diffuseColor.rgb*=.91+.18*weather;`;
+      float weather=terrainNoise(vSurfaceWorld.xz*.3)*.6+terrainNoise(vSurfaceWorld.xz*.05)*.4;
+      diffuseColor.rgb*=.88+.22*weather;`;
+    if(type==='gravel') code=`
+      diffuseColor.rgb*=.9+.2*terrainNoise(vSurfaceWorld.xz*.2);`;
     if(type==='plaster'||type==='brick'||type==='blocks') code=`
       float stain=terrainNoise(vec2(vSurfaceWorld.x+vSurfaceWorld.z,vSurfaceWorld.y*.13)*2.0);
       diffuseColor.rgb*=.85+.19*stain;`;
     shader.fragmentShader=shader.fragmentShader.replace('#include <color_fragment>','#include <color_fragment>\n'+code);
   };
-  m.customProgramCacheKey=()=>`aushiger-surface-${type}-3`;
+  m.customProgramCacheKey=()=>`aushiger-surface-${type}-5`;
 }
 
 export async function textureWorld(root, renderer, onProgress) {
@@ -121,11 +152,11 @@ export async function textureWorld(root, renderer, onProgress) {
         else if(/concrete/i.test(m.name))m.color.set('#aaa99c');
         else m.color.set('#f2f1e8');
       } else m.color.set('#ffffff');
-      if(t==='grass')m.color.set('#b4cc9b');
+      if(t==='grass')m.color.set('#ffffff');
       if(t==='asphalt'&&/repairs/i.test(m.name))m.color.set('#939591');
       if(t==='metal'){m.metalness=.78;m.roughness=.65;}
       if(t==='leaf'){m.side=THREE.DoubleSide;m.shadowSide=THREE.DoubleSide;}
-      if(['grass','asphalt','plaster','brick','blocks'].includes(t))macroVariation(m,t);
+      if(t!=='leaf'&&t!=='metal')surfaceShader(m,t);
       pack.materials.push(m);m.needsUpdate=true;
     }
   });
@@ -138,8 +169,8 @@ export async function textureWorld(root, renderer, onProgress) {
 // Phones and low-memory devices get 1K maps, everything else 2K. Failure leaves local maps intact.
 const PHOTO_SETS=[
   // ground first: it fills most of the screen
-  {type:'asphalt',id:'asphalt_02'},
-  {type:'grass',id:'aerial_grass_rock'},
+  {type:'asphalt',id:'asphalt_04',width:4},
+  {type:'grass',id:'leafy_grass',width:2},
   {type:'clay',id:'brown_mud'},
   {type:'gravel',id:'gravel_ground_01',width:3},
   // buildings

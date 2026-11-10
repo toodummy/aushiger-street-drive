@@ -6,9 +6,9 @@ import {EffectComposer} from 'three/addons/postprocessing/EffectComposer.js';
 import {RenderPass} from 'three/addons/postprocessing/RenderPass.js';
 import {SSAOPass} from 'three/addons/postprocessing/SSAOPass.js';
 import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
-import {textureWorld,upgradePhotographic,assetStatus} from './materials.js?v=7';
-import {lightWorld} from './environment.js?v=6';
-import {enrichWorld,batchTrees} from './detail.js?v=6';
+import {textureWorld,upgradePhotographic,assetStatus} from './materials.js?v=8';
+import {lightWorld} from './environment.js?v=7';
+import {enrichWorld,batchTrees} from './detail.js?v=7';
 import {createDriveState,stepDrive,mouseLook,clamp} from './driving.js?v=7';
 
 const $=s=>document.querySelector(s);
@@ -17,7 +17,7 @@ try { renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-per
 catch(error) { throw new Error('WebGL 2 is unavailable. Enable graphics acceleration in your browser settings, restart the browser, then reload this page.'); }
 renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,1.4));
 renderer.outputColorSpace=THREE.SRGBColorSpace;
-renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=.92;
+renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=.97;
 renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 renderer.domElement.id='world';renderer.domElement.tabIndex=0;renderer.domElement.setAttribute('aria-label','3D street. Click to look around with the mouse.');
 document.body.prepend(renderer.domElement);
