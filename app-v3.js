@@ -1,6 +1,6 @@
 import {addLandscape} from './landscape.js?v=7';
-import {createGarage} from './garage.js?v=43';
-import {createTraffic} from './traffic.js?v=4';
+import {createGarage} from './garage.js?v=44';
+import {createTraffic} from './traffic.js?v=5';
 import {createCows} from './cows.js?v=3';
 import {crumple,repair,createSmoke} from './damage.js?v=1';
 import * as THREE from 'three';

@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
-import {loadCar} from './garage.js?v=43';
+import {loadCar} from './garage.js?v=44';
 import {crumple,ownGeometry} from './damage.js?v=1';
 
 // Random village traffic: oncoming cars in the left lane, slow cars ahead you can pass,
