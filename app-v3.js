@@ -1,5 +1,7 @@
-import {addLandscape} from './landscape.js?v=6';
+import {addLandscape} from './landscape.js?v=7';
 import {createGarage} from './garage.js?v=41';
+import {createTraffic} from './traffic.js?v=1';
+import {createCows} from './cows.js?v=1';
 import * as THREE from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {EffectComposer} from 'three/addons/postprocessing/EffectComposer.js';
@@ -28,7 +30,7 @@ const viewQ=new THREE.Quaternion(),baseQ=new THREE.Quaternion(),freeBase=new THR
 const lookMatrix=new THREE.Matrix4(),lookEuler=new THREE.Euler(0,0,0,'YXZ');
 const freePosition=new THREE.Vector3();
 let route,ready=false,lighting,details,world,packs,drag=null,quality='balanced',photoSky=false;
-let composer,ssao,renderPass,outputPass,landscape,garage;
+let composer,ssao,renderPass,outputPass,landscape,garage,traffic,cows;
 let frames=0,frameTime=0,fps=0,hudElapsed=0,driveView='interior';
 
 function sample(d){
@@ -155,6 +157,7 @@ try{
   details=enrichWorld(scene,world,sample,packs);batchTrees(world);
   landscape=addLandscape(scene,world);
   garage=createGarage(scene,()=>{keys.clear();state.cruise=false;state.speed=0;updateControls();},()=>{state.free=false;state.yaw=state.pitch=0;keys.clear();pose();updateControls();});
+  cows=createCows(scene,sample);traffic=createTraffic(scene,sample);
   progress('Preparing daylight and shadows',90);
   composer=new EffectComposer(renderer);renderPass=new RenderPass(scene,camera);renderPass.enabled=true;
   ssao=new SSAOPass(scene,camera,innerWidth,innerHeight);ssao.kernelRadius=7;ssao.minDistance=.001;ssao.maxDistance=.06;
@@ -170,7 +173,7 @@ $('#retry')?.addEventListener('click',()=>location.reload());
 const clock=new THREE.Clock();
 renderer.setAnimationLoop(()=>{
   const elapsed=clock.getDelta(),dt=Math.min(elapsed,.05);if(!ready)return;
-  const wasCruise=state.cruise;if(!state.free&&!garage?.isOpen)stepDrive(state,keys,dt,1490,garage.topSpeed);garage?.setSpeed(state.speed);if(wasCruise!==state.cruise)updateControls();
+  const wasCruise=state.cruise;if(!state.free&&!garage?.isOpen)stepDrive(state,keys,dt,1490,garage.topSpeed);if(!garage?.isOpen){cows?.update(dt,state,traffic?.obstacles()||[]);traffic?.update(dt,state,cows?.obstacles()||[]);}garage?.setSpeed(state.speed);if(wasCruise!==state.cruise)updateControls();
   pose(garage?.isOpen?0:dt);lighting.update(camera,forward);landscape?.update(dt);
   if(quality==='high')composer.render();else renderer.render(scene,camera);
   frames++;frameTime+=elapsed;hudElapsed+=elapsed;

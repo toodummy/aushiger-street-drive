@@ -15,9 +15,58 @@ export function addLandscape(scene,world){
  const group=new THREE.Group();group.name='Distant Caucasus and left valley river';scene.add(group);
  world.traverse(o=>{if(/Distant continuous mountain silhouette|Caucasus snowcap accents|Valley floor/.test(o.name))o.visible=false;});
  const haze=new THREE.Color('#a4bdcb');
+ // Distant ranges: denser ridged geometry plus a shader that adds rock strata, crags (bump),
+ // snow that slides off steep faces, forested lower slopes on the nearer ranges, sun shading and haze.
+ const phone=matchMedia('(max-width:820px)').matches||matchMedia('(pointer:coarse)').matches;
+ const ridged=(x,z)=>1-Math.abs(noise(x,z)*2-1);
+ const crags=(x,z)=>ridged(x*.0032,z*.0032)*.55+ridged(x*.0085,z*.0085)*.3+ridged(x*.021,z*.021)*.15-.5;
+ const sunDir=new THREE.Vector3(-.48,.76,.44).normalize();
  for(const [layer,depth,height,span] of [[0,9800,1380,17500],[1,6100,420,14500],[2,3600,135,12000]]){
   const rock=new THREE.Color(['#6b8296','#577d8b','#4a726d'][layer]),snow=new THREE.Color('#e4edf0');
-  const range=grid('Distant mountain range '+layer,620,44,(u,v)=>{const x=(u-.5)*span*2,ridge=.39+.11*Math.sin(x*.00052+layer),flank=Math.max(0,1-Math.abs(v-ridge)/(v<ridge?ridge:1-ridge));const peak=height*(.37+.48*Math.pow(fbm(x*.0009,layer+11),.65)+.37*Math.abs(Math.sin(x*.00145+layer)*Math.sin(x*.00047+1)));return [x,-65+peak*Math.pow(flank,.9)+(noise(x*.005,v*20+layer)-.5)*height*.09*flank,-depth-v*(layer===0?3100:1800)];},p=>{let c=rock.clone().multiplyScalar(.73+.27*fbm(p[0]*.004,p[2]*.004));if(layer===0){const snowline=height*(.46+.12*noise(p[0]*.006,p[2]*.003));c.lerp(snow,THREE.MathUtils.clamp((p[1]-snowline)/110,0,1)*(.74+.26*noise(p[0]*.01,p[2]*.008)));}return c.lerp(haze,[.24,.19,.10][layer]).toArray();},new THREE.MeshBasicMaterial({vertexColors:true,fog:false,side:THREE.DoubleSide}));group.add(range);
+  const cols=Math.round([1150,900,700][layer]*(phone?.62:1)),rows=Math.round([84,60,46][layer]*(phone?.7:1));
+  const material=new THREE.MeshBasicMaterial({vertexColors:true,fog:false,side:THREE.DoubleSide});
+  const u={mtnSun:{value:sunDir},mtnHaze:{value:haze},mtnHazeAmt:{value:[.2,.16,.08][layer]},mtnHeight:{value:height},mtnLayer:{value:layer},
+    mtnRockA:{value:new THREE.Color(['#4a5868','#44524f','#3f4a3c'][layer])},mtnRockB:{value:new THREE.Color(['#7a8490','#6f7268','#6d6a58'][layer])},mtnGreen:{value:new THREE.Color(['#4d5e45','#3e5a32','#3b5a2c'][layer])}};
+  material.onBeforeCompile=sh=>{
+   Object.assign(sh.uniforms,u);
+   sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 vMtnW; varying vec3 vMtnN;')
+    .replace('#include <project_vertex>','#include <project_vertex>\nvMtnW=(modelMatrix*vec4(transformed,1.0)).xyz; vMtnN=normalize(mat3(modelMatrix)*normal);');
+   sh.fragmentShader=sh.fragmentShader.replace('#include <common>',`#include <common>
+    varying vec3 vMtnW; varying vec3 vMtnN;
+    uniform vec3 mtnSun,mtnHaze,mtnRockA,mtnRockB,mtnGreen; uniform float mtnHazeAmt,mtnHeight,mtnLayer;
+    float mH(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+    float mN(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.0-2.0*f);return mix(mix(mH(i),mH(i+vec2(1,0)),f.x),mix(mH(i+vec2(0,1)),mH(i+1.0),f.x),f.y);}
+    float mR(vec2 p){return 1.0-abs(mN(p)*2.0-1.0);}
+    float mF(vec2 p){return mR(p)*.5+mR(p*2.13)*.3+mR(p*4.37)*.2;}`)
+   .replace('#include <color_fragment>',`#include <color_fragment>
+    vec3 n=normalize(vMtnN); if(n.y<0.0)n=-n;
+    // crag bump from ridged noise, via screen-space derivatives
+    float bumpH=mF(vMtnW.xz*.011+vMtnW.y*.004)*mtnHeight*.035+mN(vMtnW.xz*.05)*mtnHeight*.006;
+    vec3 sx=dFdx(vMtnW),sy=dFdy(vMtnW),r1=cross(sy,n),r2=cross(n,sx);float det=dot(sx,r1);
+    vec3 grad=sign(det)*(dFdx(bumpH)*r1+dFdy(bumpH)*r2);
+    n=normalize(abs(det)*n-grad); if(n.y<0.0)n=-n;
+    float slope=1.0-n.y;
+    float h=vMtnW.y/mtnHeight;
+    // layered rock with horizontal strata and weathering
+    float strata=mN(vec2(vMtnW.x*.0012,vMtnW.y*.045+mN(vMtnW.xz*.002)*3.0));
+    float gully=mR(vec2(vMtnW.x*.006+mN(vMtnW.xz*.004)*2.0,vMtnW.y*.0015));
+    vec3 rockCol=mix(mtnRockA,mtnRockB,strata*.3+mF(vMtnW.xz*.006)*.45+gully*.25);
+    rockCol*=.82+.36*mN(vMtnW.xz*.03);
+    // forest and meadow on gentle low slopes (nearer ranges mostly)
+    float veg=(1.0-smoothstep(.18,.42,slope))*(1.0-smoothstep(.25+mtnLayer*.2,.55+mtnLayer*.25,h));
+    vec3 albedo=mix(rockCol,mtnGreen*(.8+.4*mN(vMtnW.xz*.02)),veg*(mtnLayer>0.5?.85:.45));
+    // snow from the existing snowline colours, kept off steep faces, broken by wind-blown streaks
+    float snowSrc=smoothstep(.62,.86,dot(diffuseColor.rgb,vec3(.333)));
+    float snowHold=1.0-smoothstep(.38,.72,slope+(mN(vMtnW.xz*.02)-.5)*.25);
+    float snow=snowSrc*snowHold;
+    albedo=mix(albedo,vec3(.93,.95,.97),snow);
+    float lit=max(dot(n,normalize(mtnSun)),0.0);
+    vec3 col=albedo*(vec3(.50,.55,.62)+vec3(1.0,.96,.88)*lit*.78);
+    float hz=mtnHazeAmt+(1.0-smoothstep(.05,.55,h))*.38;
+    diffuseColor.rgb=mix(col,mtnHaze*vec3(.94,.98,1.04),clamp(hz,0.0,.72));`);
+  };
+  material.customProgramCacheKey=()=>'aushiger-mountains-2';
+  const range=grid('Distant mountain range '+layer,cols,rows,(u,v)=>{const x=(u-.5)*span*2,ridge=.39+.11*Math.sin(x*.00052+layer),flank=Math.max(0,1-Math.abs(v-ridge)/(v<ridge?ridge:1-ridge));const peak=height*(.37+.48*Math.pow(fbm(x*.0009,layer+11),.65)+.37*Math.abs(Math.sin(x*.00145+layer)*Math.sin(x*.00047+1)));const z=-depth-v*(layer===0?3100:1800);return [x,-65+peak*Math.pow(flank,.9)+(noise(x*.005,v*20+layer)-.5)*height*.09*flank+crags(x,z)*height*.16*Math.pow(flank,1.3),z];},p=>{let c=rock.clone().multiplyScalar(.73+.27*fbm(p[0]*.004,p[2]*.004));if(layer===0){const snowline=height*(.46+.12*noise(p[0]*.006,p[2]*.003));c.lerp(snow,THREE.MathUtils.clamp((p[1]-snowline)/110,0,1)*(.74+.26*noise(p[0]*.01,p[2]*.008)));}return c.toArray();},material);group.add(range);
  }
  const sections=[-4200,-2500,-1200,-500,-180,-90,-58,-45,-30,-14,0,14,30,45,58,90,180,320,480,700,1100,1900];
  const terrain=grid('Gravel banks and river floodplain',sections.length-1,480,(u,v)=>{const z=1400-v*7700,dx=sections[Math.round(u*(sections.length-1))],w=riverHalfWidth(z);const y=Math.abs(dx)<w?riverLevel(z)-2.8:riverLevel(z)+.8+Math.min(2.2,(Math.abs(dx)-w)*.045)+fbm(dx*.03,z*.03)*.8;return [riverCenter(z)+dx,y,z];},p=>{const d=Math.abs(p[0]-riverCenter(p[2])),w=riverHalfWidth(p[2]);return new THREE.Color(d<w?'#515e58':d<w+34?'#9b9684':'#536b35').multiplyScalar(.82+.36*fbm(p[0]*.04,p[2]*.04)).toArray();},new THREE.MeshStandardMaterial({vertexColors:true,roughness:1,side:THREE.DoubleSide}));terrain.receiveShadow=true;group.add(terrain);
