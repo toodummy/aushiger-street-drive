@@ -1,6 +1,7 @@
 import {makeCockpit} from './cockpit.js?v=9';
 import * as THREE from 'three';
 import {restyle2106Seats} from './seats.js?v=1';
+import {toCreasedNormals} from 'three/addons/utils/BufferGeometryUtils.js';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 const $=s=>document.querySelector(s);
 const key='aushiger-local-cars';
@@ -31,6 +32,8 @@ export async function loadCar(files){
   const gltf=await new GLTFLoader(manager).parseAsync(data,'');
   if(main.name==='vw-polo-2017.glb'){for(const name of ['Ground','ArchCut_FL','ArchCut_FR','ArchCut_RL','ArchCut_RR']){const helper=gltf.scene.getObjectByName(name);if(helper)helper.removeFromParent();}}
   if(/lada-2106/i.test(main.name))restyle2106Seats(gltf.scene);
+  // Lada 2107: the body's smoothed normals bend across the boot lid and rear panel, which looks like a dent; recompute them with sharp creases
+  if(/lada-21074/i.test(main.name))gltf.scene.traverse(o=>{if(o.isMesh&&/^Body_Lower/.test(o.name))o.geometry=toCreasedNormals(o.geometry,Math.PI/5);});
   const wrapper=new THREE.Group();wrapper.add(gltf.scene);wrapper.name='Selected vehicle';
   let bounds=new THREE.Box3().setFromObject(wrapper),size=bounds.getSize(new THREE.Vector3());
   if(size.x>size.z){gltf.scene.rotation.y+=Math.PI/2;wrapper.updateMatrixWorld(true);bounds.setFromObject(wrapper);size=bounds.getSize(new THREE.Vector3());}
