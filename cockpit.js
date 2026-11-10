@@ -88,7 +88,7 @@ function make2106(){
 // Compact, model-specific cockpit detail for the driver's view.
 export function makeCockpit(isKalina, is2106=false, isPolo=false) {
  if(is2106)return make2106();
- if(isPolo)return new THREE.Group();   // the Polo and 2107 carry their own modelled interiors
+ if(isPolo)return new THREE.Group();   // the Polo, 2107 and Kalina carry their own modelled interiors
  const root=new THREE.Group();
  const plastic=new THREE.MeshStandardMaterial({color:isKalina?0x383b3c:0x222321,roughness:.87});
  const dark=new THREE.MeshStandardMaterial({color:0x101211,roughness:.78});
@@ -116,7 +116,7 @@ export function makeCockpit(isKalina, is2106=false, isPolo=false) {
  gauge(-.16,-.48,.125,180);gauge(.14,-.48,.125,isKalina?8:80);
  if(!isKalina){gauge(.32,-.48,.064,100);gauge(-.34,-.48,.064,100)}
  // Distinctive steering wheel rim, hub, and spokes.
- const wheel=new THREE.Group();wheel.position.set(0,-.49,-.49);if(!isKalina)root.add(wheel);   // the Kalina model has its own wheel
+ const wheel=new THREE.Group();wheel.position.set(0,-.49,-.49);root.add(wheel);
  const rim=new THREE.Mesh(new THREE.TorusGeometry(.205,.022,14,64),dark);wheel.add(rim);
  const hub=new THREE.Mesh(new THREE.CylinderGeometry(.074,.08,.035,32),plastic);hub.rotation.x=Math.PI/2;hub.position.z=.018;wheel.add(hub);
  function spoke(x,y,ang){const m=new THREE.Mesh(new THREE.BoxGeometry(.14,.035,.024),plastic);m.position.set(x,y,0);m.rotation.z=ang;wheel.add(m)}
@@ -145,25 +145,6 @@ export function makeCockpit(isKalina, is2106=false, isPolo=false) {
   box(.10,.37,1.25,-.91,-.65,-.22,plastic);
   box(.10,.37,1.25,1.25,-.65,-.22,plastic);
   wheel.traverse(o=>{if(o.isMesh){o.material=o.material.clone();o.material.depthTest=false;o.material.depthWrite=false;o.renderOrder=100;}});
- }
- if(isKalina){
-  // Dark A-pillar trims over the stepped window cut-outs of the Kalina body.
-  // Points are model units relative to the driver's eye, turned into cockpit space.
-  const pillarMat=new THREE.MeshStandardMaterial({color:0x26292b,roughness:.85});
-  const toCockpit=(x,y,z)=>new THREE.Vector3(z+.40,y-1.25-.24,-(x+.18)+.22);
-  // Each trim spans the side-window edge (S) to the windscreen edge (W), bottom to top, with 3 cm of overlap.
-  const S=[[.597,.97,-.809],[.147,1.47,-.601]],W=[[.926,.97,-.654],[.209,1.47,-.562]];
-  pillarMat.side=THREE.DoubleSide;
-  for(const s of [-1,1]){
-   const eye=new THREE.Vector3(0,-.24,.22),q=[];
-   for(const k of [0,1]){
-    const sp=toCockpit(S[k][0],S[k][1],s*-S[k][2]),wp=toCockpit(W[k][0],W[k][1],s*-W[k][2]),out=sp.clone().sub(wp).normalize().multiplyScalar(.03);
-    q.push(sp.add(out),wp.sub(out));
-   }
-   for(const p of q)p.add(eye.clone().sub(p).normalize().multiplyScalar(.025));   // just inside the body
-   const g=new THREE.BufferGeometry().setFromPoints([q[0],q[1],q[3],q[0],q[3],q[2]]);g.computeVertexNormals();
-   root.add(new THREE.Mesh(g,pillarMat));
-  }
  }
  return root;
 }
