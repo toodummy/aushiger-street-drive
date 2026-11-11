@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
-import {loadCar} from './garage.js?v=51';
+import {loadCar} from './garage.js?v=52';
 import {crumple,ownGeometry} from './damage.js?v=1';
 import {makeCar,STYLE_KEYS,STYLES,makeTruck,TRUCK_KEYS,TRUCKS,carExhaust} from './carfactory.js?v=2';
 

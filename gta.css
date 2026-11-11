@@ -101,3 +101,21 @@ select{border-radius:2px!important;background:#000!important;color:#fff!importan
   #car-preview{top:55%!important;bottom:28%!important;right:0!important}
 }
 @media(max-height:650px) and (min-width:701px){.driver-picker{top:9%!important;bottom:10%!important}}
+
+/* ---------- driving controls: arrow keys on computers, a thumb stick on phones ---------- */
+.arrow-pad{display:grid!important;grid-template-columns:repeat(3,46px);grid-template-rows:40px 40px;gap:4px!important;padding:6px!important}
+.arrow-pad button{min-width:0!important;width:46px;height:40px!important;padding:0!important;font-size:15px!important}
+.arrow-pad .k-up{grid-column:2;grid-row:1}.arrow-pad .k-left{grid-column:1;grid-row:2}.arrow-pad .k-down{grid-column:2;grid-row:2}.arrow-pad .k-right{grid-column:3;grid-row:2}
+.arrow-pad button:active,.arrow-pad button.down{background:#fff!important;color:#000!important}
+#stick{display:none;position:fixed;z-index:5;right:22px;bottom:22px;width:150px;height:150px;touch-action:none;user-select:none;-webkit-user-select:none}
+#stick .stick-ring{position:absolute;inset:0;border-radius:50%;background:radial-gradient(circle,rgba(0,0,0,.25),rgba(0,0,0,.55));border:3px solid rgba(255,255,255,.75);box-shadow:0 4px 18px rgba(0,0,0,.45)}
+#stick .stick-knob{position:absolute;left:50%;top:50%;width:64px;height:64px;margin:-32px 0 0 -32px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff,#d8d8d8 60%,#9a9a9a);border:3px solid #000;box-shadow:0 3px 10px rgba(0,0,0,.5);transition:transform .12s}
+#stick.held .stick-knob{transition:none;background:radial-gradient(circle at 35% 30%,#bff0bf,var(--gta-green) 60%,#2f8f3a)}
+#stick span{position:absolute;left:0;right:0;text-align:center;font-family:"Oswald",sans-serif;font-weight:700;font-size:10px;letter-spacing:.14em;color:#fff;text-shadow:0 1px 2px #000;pointer-events:none}
+#stick .stick-up{top:8px}#stick .stick-down{bottom:8px}
+@media (pointer:coarse),(max-width:820px){
+  #stick{display:block}
+  .touch-controls{display:none!important}
+  #look-hint{bottom:auto!important;top:72px}
+}
+@media (max-width:420px){#stick{width:136px;height:136px;right:14px;bottom:16px}#stick .stick-knob{width:58px;height:58px;margin:-29px 0 0 -29px}}

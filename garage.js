@@ -31,6 +31,10 @@ export async function loadCar(files){
   const gltf=await new GLTFLoader(manager).parseAsync(data,'');
   if(main.name==='vw-polo-2017.glb'){for(const name of ['Ground','ArchCut_FL','ArchCut_FR','ArchCut_RL','ArchCut_RR']){const helper=gltf.scene.getObjectByName(name);if(helper)helper.removeFromParent();}}
   // Lada 2107: the body's smoothed normals bend across the boot lid and rear panel, which looks like a dent; recompute them with sharp creases
+  // Lada 2106: tidy the rear window. The boot-lid seam lines float above the curved lid and stick out
+  // past the body, small gap pieces and the pillar vents poke out of the C-pillars, and the top of the
+  // rear seat is wider than the glass so it shows red at the window corners.
+  if(/lada-2106/i.test(main.name))fix2106(gltf.scene);
   if(/lada-21074/i.test(main.name))gltf.scene.traverse(o=>{if(o.isMesh&&/^Body_Lower/.test(o.name))o.geometry=toCreasedNormals(o.geometry,Math.PI/5);});
   const wrapper=new THREE.Group();wrapper.add(gltf.scene);wrapper.name='Selected vehicle';
   let bounds=new THREE.Box3().setFromObject(wrapper),size=bounds.getSize(new THREE.Vector3());
@@ -41,9 +45,29 @@ export async function loadCar(files){
   const pivot=new THREE.Group();pivot.add(wrapper);bounds.setFromObject(pivot);size=bounds.getSize(new THREE.Vector3());
   pivot.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});
   keepInteriorOutOfWheels(pivot);
+  if(/lada-2106/i.test(main.name))trimBeltLine(pivot);
   const eyeMarker=pivot.getObjectByName('Lada_DriverEye'),driverEye=eyeMarker?eyeMarker.getWorldPosition(new THREE.Vector3()):null;
   return {root:pivot,size,driverEye,name:main.name.replace(/\.(glb|gltf)$/i,'')};
  }finally{urls.forEach(u=>URL.revokeObjectURL(u));}
+}
+function fix2106(scene){
+  scene.updateMatrixWorld(true);
+  const drop=[];scene.traverse(o=>{if(/^(TrunkGap_-?1|Gap_-?1_-112_\d+)$/.test(o.name))drop.push(o);});drop.forEach(o=>o.removeFromParent());
+  const w=new THREE.Vector3(),c=new THREE.Vector3();
+  // move a part sideways towards the car's centre line (world metres), whatever the file's own scale
+  // the file may store the car lengthways along x; then its width runs along z
+  const size=new THREE.Box3().setFromObject(scene).getSize(new THREE.Vector3()),ax=size.x>size.z?'z':'x',bodyScale=Math.max(size.x,size.z)/4.12;
+  const inward=(o,m)=>{o.getWorldPosition(w);const box=new THREE.Box3().setFromObject(o);box.getCenter(c);const side=Math.sign(c[ax])||1;w[ax]-=side*m;o.position.copy(o.parent.worldToLocal(w.clone()));o.updateMatrixWorld(true);};
+  scene.traverse(o=>{if(/^(CPillar_Vent_[LR]|CPillar_Rib_[LR]\d)$/.test(o.name))inward(o,.018*bodyScale);});
+  const seat=scene.getObjectByName('Int_Rear_Back_Top');if(seat){seat.scale[ax]*=.9;}
+}
+// the chrome belt-line strips run on past the rear door, beyond the narrowing rear wing; end them there
+function trimBeltLine(pivot,endZ=.97){
+  pivot.updateMatrixWorld(true);const v=new THREE.Vector3(),inv=new THREE.Matrix4();
+  pivot.traverse(o=>{if(!o.isMesh||!/^BeltTrim_-?1$/.test(o.name))return;
+    const p=o.geometry.attributes.position;inv.copy(o.matrixWorld).invert();
+    for(let i=0;i<p.count;i++){v.fromBufferAttribute(p,i).applyMatrix4(o.matrixWorld);if(v.z>endZ){v.z=endZ;v.applyMatrix4(inv);p.setXYZ(i,v.x,v.y,v.z);}}
+    p.needsUpdate=true;o.geometry.computeBoundingSphere();o.geometry.computeBoundingBox();});
 }
 // Interior pieces (floor, sills, door cards) must not reach into the wheel wells, where they show
 // through the arches or cut across the wheels. Pull any such vertex back inboard of the tyre.
@@ -168,5 +192,32 @@ export function createGarage(scene,onPause,onStart){
   local.applyAxisAngle(new THREE.Vector3(0,1,0),yaw);return local.applyQuaternion(rotation).add(position);
  }
  
- drawList();show();choose(builtins[0].id);return {get isOpen(){return open;},setSpeed(v){cockpit?.userData.setSpeed?.(v);const kmh=Math.abs(v)*3.6;for(const [name,t] of [['Int_Needle_Speed_Hand',kmh/({'lada-2106-v1':180,'lada-21074-v1':180,'lada-kalina-v1':200}[selected]||240)],['Int_Needle_Tach_Hand',polRpm(kmh)/8]]){const hand=loaded?.root.getObjectByName(name);if(hand)hand.quaternion.setFromAxisAngle(UP,(225-270*Math.min(1,Math.max(0,t)))*Math.PI/180);}},get topSpeed(){return (items.find(i=>i.id===selected)?.top??80)/3.6;},get hasCar(){return !!loaded;},get carRoot(){return loaded?.root;},show,sync,eye};
+ // Front wheels steer, all wheels roll, and the steering wheel turns with them. Axes are worked out in
+ // the car's own frame (front -Z, right +X, up +Y), whatever orientation each model was built in.
+ let rig=null;
+ function buildRig(){
+  const root=loaded.root,r={root,wheels:[],sw:null},rootQ=root.getWorldQuaternion(new THREE.Quaternion()).invert();
+  root.updateMatrixWorld(true);
+  const inParent=(o,v)=>{const rel=rootQ.clone().multiply(o.parent.getWorldQuaternion(new THREE.Quaternion()));return v.clone().applyQuaternion(rel.invert()).normalize();};
+  root.traverse(o=>{
+   const m=/^Wheel_(F|R)(L|R)$/.exec(o.name);
+   if(m)r.wheels.push({o,q0:o.quaternion.clone(),front:m[1]==='F',up:inParent(o,new THREE.Vector3(0,1,0)),axle:inParent(o,new THREE.Vector3(1,0,0))});
+   if(o.name==='Int_Wheel'&&!r.sw){
+    const rim=o.getObjectByName('Int_Wheel_Rim');if(!rim?.geometry)return;
+    rim.geometry.computeBoundingBox();const sz=rim.geometry.boundingBox.getSize(new THREE.Vector3()),k=sz.x<sz.y?(sz.x<sz.z?'x':'z'):(sz.y<sz.z?'y':'z');
+    const axis=new THREE.Vector3();axis[k]=1;axis.applyQuaternion(rim.quaternion);
+    // make the column axis point back at the driver (+Z in the car frame)
+    const rel=rootQ.clone().multiply(o.getWorldQuaternion(new THREE.Quaternion()));if(axis.clone().applyQuaternion(rel).z<0)axis.negate();
+    r.sw={o,q0:o.quaternion.clone(),axis};
+   }
+  });
+  return r;
+ }
+ const qa=new THREE.Quaternion(),qb=new THREE.Quaternion();
+ function setDrive(wheelAngle,roll){
+  if(!loaded)return;if(!rig||rig.root!==loaded.root)rig=buildRig();
+  for(const w of rig.wheels){qb.setFromAxisAngle(w.axle,-roll/.29);qa.setFromAxisAngle(w.up,w.front?-wheelAngle:0);w.o.quaternion.copy(qa).multiply(qb).multiply(w.q0);}
+  if(rig.sw){qa.setFromAxisAngle(rig.sw.axis,-wheelAngle*3.6);rig.sw.o.quaternion.copy(rig.sw.q0).multiply(qa);}
+ }
+ drawList();show();choose(builtins[0].id);return {get isOpen(){return open;},setDrive,setSpeed(v){cockpit?.userData.setSpeed?.(v);const kmh=Math.abs(v)*3.6;for(const [name,t] of [['Int_Needle_Speed_Hand',kmh/({'lada-2106-v1':180,'lada-21074-v1':180,'lada-kalina-v1':200}[selected]||240)],['Int_Needle_Tach_Hand',polRpm(kmh)/8]]){const hand=loaded?.root.getObjectByName(name);if(hand)hand.quaternion.setFromAxisAngle(UP,(225-270*Math.min(1,Math.max(0,t)))*Math.PI/180);}},get topSpeed(){return (items.find(i=>i.id===selected)?.top??80)/3.6;},get hasCar(){return !!loaded;},get carRoot(){return loaded?.root;},show,sync,eye};
 }

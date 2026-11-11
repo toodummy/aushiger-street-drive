@@ -24,13 +24,13 @@ export function createAudio(){
   function start(){
     if(!enabled)return;
     unlock();
-    if(ctx){if(ctx.state!=='running')ctx.resume().catch(()=>{});return;}
+    if(ctx){if(ctx.state!=='running')ctx.resume().catch(()=>{});if(musicOn&&!musicTimer)startMusic();return;}
     const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;
     ctx=new AC();master=ctx.createGain();master.gain.value=enabled?.9:0;master.connect(ctx.destination);
     ambience=ctx.createGain();ambience.gain.value=1;ambience.connect(master);
     musicBus=ctx.createGain();musicBus.gain.value=musicOn?MUSIC_VOL:0;musicBus.connect(master);
     if(ctx.state!=='running')ctx.resume().catch(()=>{});
-    loadSamples();
+    loadSamples();if(musicOn)startMusic();
     noiseBuf=ctx.createBuffer(1,ctx.sampleRate*2,ctx.sampleRate);const d=noiseBuf.getChannelData(0);let b=0;
     for(let i=0;i<d.length;i++){const w=Math.random()*2-1;b=.97*b+.03*w;d[i]=w*.5+b*2.5;}
     // wind: filtered noise, very low and slowly breathing
@@ -112,73 +112,19 @@ export function createAudio(){
     o.start(t);am.start(t);n.start(t,Math.random());for(const x of [o,am,n])x.stop(t+len+.05);
   }
 
-  // ---- Background music: a quiet lezginka played by a synthesised garmon (button accordion) with a
-  // doli drum in fast 6/8. Two phrases in D minor with a raised 7th, then a livelier variation an
-  // octave up; the garmon's bass buttons play "oom-pah" on beats 1 and 4.
-  const E=.135;                                  // one eighth note (seconds) — dotted-quarter ≈ 148 bpm
-  const _='-';                                   // hold the previous note
-  const TUNE=[
-    // phrase A
-    7,7,7, 7,5,3,   2,3,5, 7,_,_,   8,7,5, 3,2,0,   2,_,-1, 0,_,_,
-    // phrase B
-    0,3,7, 12,_,10, 8,7,5, 7,_,_,   5,3,2, 3,2,0,   -1,2,5, 0,_,_,
-    // phrase A again, more ornamented
-    7,8,7, 7,5,3,   2,3,5, 7,8,10,  8,7,5, 3,2,0,   2,3,-1, 0,_,_,
-    // phrase C: up high, dancing
-    12,12,12, 12,10,8, 10,10,10, 10,8,7, 8,8,8, 8,7,5, 7,_,5, 7,_,_,
-    12,14,15, 14,12,10, 12,10,8, 10,8,7, 8,7,5, 3,2,0, -1,2,5, 0,_,_
-  ];
-  const ROOTS=[0,7,5,7, 0,5,7,0, 0,7,5,7, 0,10,5,7, 0,0,5,7];   // bass per bar (semitones from D)
-  const MINOR=new Set([0,5]);                                     // Dm, Gm; the A chord is major (C#)
-  const MUSIC_VOL=.11;
-  let musicStep=0,musicTime=0,musicTimer=null;
-  const hz=(semi,base=293.66)=>base*2**(semi/12);
-  function garmonNote(t,semi,len,vol){
-    const f=hz(semi),g=ctx.createGain();
-    g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(vol,t+.015);g.gain.setValueAtTime(vol*.85,t+len*.7);g.gain.linearRampToValueAtTime(0,t+len);
-    const lp=ctx.createBiquadFilter();lp.type='lowpass';lp.frequency.value=2600;lp.Q.value=.7;
-    const trem=ctx.createOscillator(),tg=ctx.createGain();trem.frequency.value=6.5;tg.gain.value=vol*.12;trem.connect(tg).connect(g.gain);
-    for(const [type,det,lv] of [['sawtooth',-6,.45],['sawtooth',6,.45],['square',0,.25]]){
-      const o=ctx.createOscillator();o.type=type;o.frequency.value=f;o.detune.value=det;
-      const og=ctx.createGain();og.gain.value=lv;o.connect(og).connect(lp);o.start(t);o.stop(t+len+.03);
+  // ---- Background music: the "Аушыджэр сити" track, looped quietly under the game sounds.
+  // An <audio> element streams it (no 4-minute decode in memory) and feeds the music volume control.
+  const MUSIC_VOL=.32;
+  let musicEl=null,musicNode=null,musicTimer=null;
+  function startMusic(){
+    if(!ctx)return;
+    if(!musicEl){
+      musicEl=new Audio('./music/aushiger-city.mp3?v=1');musicEl.loop=true;musicEl.preload='auto';musicEl.setAttribute('playsinline','');
+      try{musicNode=ctx.createMediaElementSource(musicEl);musicNode.connect(musicBus);}catch(e){musicEl.volume=MUSIC_VOL;}
     }
-    lp.connect(g).connect(musicBus);trem.start(t);trem.stop(t+len+.03);
+    musicTimer=true;musicEl.play().catch(()=>{musicTimer=null;});
   }
-  function bass(t,semi,len,vol,chord){
-    const notes=chord?[semi+12,semi+12+(MINOR.has(((semi%12)+12)%12)?3:4),semi+19]:[semi-12];
-    for(const n of notes){
-      const o=ctx.createOscillator();o.type=chord?'sawtooth':'triangle';o.frequency.value=hz(n,146.83);
-      const lp=ctx.createBiquadFilter();lp.type='lowpass';lp.frequency.value=chord?1100:500;
-      const g=ctx.createGain();g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(vol/(chord?2.2:1),t+.01);g.gain.exponentialRampToValueAtTime(.0005,t+len);
-      o.connect(lp).connect(g).connect(musicBus);o.start(t);o.stop(t+len+.02);
-    }
-  }
-  function drum(t,low,vol){
-    if(low){const o=ctx.createOscillator();o.type='sine';o.frequency.setValueAtTime(120,t);o.frequency.exponentialRampToValueAtTime(52,t+.16);
-      const g=ctx.createGain();g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(.0005,t+.28);o.connect(g).connect(musicBus);o.start(t);o.stop(t+.3);}
-    else{const n=ctx.createBufferSource();n.buffer=noiseBuf;const hp=ctx.createBiquadFilter();hp.type='highpass';hp.frequency.value=2200;
-      const g=ctx.createGain();g.gain.setValueAtTime(vol*.6,t);g.gain.exponentialRampToValueAtTime(.0005,t+.07);n.connect(hp).connect(g).connect(musicBus);n.start(t,Math.random());n.stop(t+.09);}
-  }
-  function scheduleMusic(){
-    if(!ctx||!musicOn||!enabled)return;
-    const now=ctx.currentTime;if(musicTime<now)musicTime=now+.05;
-    while(musicTime<now+.35){
-      const i=musicStep%TUNE.length,inBar=i%6,bar=Math.floor(i/6)%ROOTS.length,t=musicTime;
-      const n=TUNE[i];
-      if(n!==_){let len=1;while(TUNE[(i+len)%TUNE.length]===_)len++;garmonNote(t,n,len*E*.95,.16);}
-      if(inBar===0)bass(t,ROOTS[bar],E*2.2,.22,false);
-      if(inBar===3)bass(t,ROOTS[bar],E*1.4,.16,true);
-      if(inBar===5&&bar%2)bass(t,ROOTS[bar],E*.9,.1,true);
-      // doli: DUM . tek DUM tek tek, with a roll at the end of every fourth bar
-      const roll=bar%4===3&&inBar>=3;
-      if(inBar===0||inBar===3)drum(t,true,.5);
-      if(inBar===2||inBar===4||inBar===5)drum(t,false,.32);
-      if(roll){drum(t+E/2,false,.25);}
-      musicTime+=E;musicStep++;
-    }
-  }
-  function startMusic(){if(musicTimer||!ctx)return;musicTime=0;musicTimer=setInterval(scheduleMusic,90);scheduleMusic();}
-  function stopMusic(){clearInterval(musicTimer);musicTimer=null;}
+  function stopMusic(){musicEl?.pause();musicTimer=null;}
 
   function thud(vol){
     const t=ctx.currentTime+.01,n=ctx.createBufferSource();n.buffer=noiseBuf;

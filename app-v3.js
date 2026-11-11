@@ -1,10 +1,10 @@
 import {addLandscape} from './landscape.js?v=9';
-import {createGarage} from './garage.js?v=51';
+import {createGarage} from './garage.js?v=52';
 import {createTraffic} from './traffic.js?v=10';
 import {createCows} from './cows.js?v=5';
 import {createDogs} from './dogs.js?v=4';
 import {createBirds} from './birds.js?v=1';
-import {createAudio} from './audio.js?v=3';
+import {createAudio} from './audio.js?v=4';
 import {createExhaust} from './exhaust.js?v=1';
 import {createPolice} from './police.js?v=3';
 import {crumple,repair,createSmoke} from './damage.js?v=1';
@@ -17,7 +17,7 @@ import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
 import {textureWorld,upgradePhotographic,assetStatus} from './materials.js?v=9';
 import {lightWorld} from './environment.js?v=6';
 import {enrichWorld,batchTrees} from './detail.js?v=6';
-import {createDriveState,stepDrive,mouseLook,clamp,START} from './driving.js?v=10';
+import {createDriveState,stepDrive,mouseLook,clamp,START} from './driving.js?v=11';
 
 const $=s=>document.querySelector(s);
 let renderer;
@@ -31,12 +31,23 @@ renderer.domElement.id='world';renderer.domElement.tabIndex=0;renderer.domElemen
 document.body.prepend(renderer.domElement);
 const scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(68,innerWidth/innerHeight,.12,24000);
 const state=createDriveState(),keys=new Set();
+// phone thumb stick: up = go (harder push, more gas), down = brake then reverse, sideways = steering wheel
+const stick={throttle:0,steer:0};
+{const el=document.getElementById('stick');if(el){const knob=el.querySelector('.stick-knob');let id=null;
+  const move=e=>{const r=el.getBoundingClientRect(),R=r.width/2-16,cx=r.left+r.width/2,cy=r.top+r.height/2;let dx=e.clientX-cx,dy=e.clientY-cy;const L=Math.hypot(dx,dy);if(L>R){dx*=R/L;dy*=R/L;}
+    knob.style.transform=`translate(${dx}px,${dy}px)`;const nx=dx/R,ny=-dy/R;
+    stick.steer=Math.abs(nx)<.1?0:Math.sign(nx)*((Math.abs(nx)-.1)/.9)**1.4;stick.throttle=Math.abs(ny)<.14?0:Math.sign(ny)*(Math.abs(ny)-.14)/.86;};
+  el.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();id=e.pointerId;try{el.setPointerCapture(id);}catch(err){}el.classList.add('held');move(e);});
+  el.addEventListener('pointermove',e=>{if(e.pointerId===id){e.preventDefault();move(e);}});
+  const end=e=>{if(e.pointerId!==id)return;id=null;el.classList.remove('held');knob.style.transform='';stick.throttle=stick.steer=0;};
+  for(const t of ['pointerup','pointercancel','lostpointercapture'])el.addEventListener(t,end);
+  el.addEventListener('contextmenu',e=>e.preventDefault());}}
 const forward=new THREE.Vector3(0,0,-1),up=new THREE.Vector3(0,1,0),right=new THREE.Vector3();
 const viewQ=new THREE.Quaternion(),baseQ=new THREE.Quaternion(),freeBase=new THREE.Quaternion();
 const lookMatrix=new THREE.Matrix4(),lookEuler=new THREE.Euler(0,0,0,'YXZ');
 const freePosition=new THREE.Vector3();
 let route,ready=false,lighting,details,world,packs,drag=null,quality='balanced',photoSky=false;
-let composer,ssao,renderPass,outputPass,landscape,garage,traffic,cows,dogs,smoke,birds,police;const audio=createAudio();const carPosW=new THREE.Vector3(),carFwdW=new THREE.Vector3(0,0,-1);const enginePos=new THREE.Vector3(),carVel=new THREE.Vector3(),exhaustPos=new THREE.Vector3();let exhaust,puffClock=0;
+let composer,ssao,renderPass,outputPass,landscape,garage,traffic,cows,dogs,smoke,birds,police;const audio=createAudio();const carPosW=new THREE.Vector3(),carFwdW=new THREE.Vector3(0,0,-1);const headingQ=new THREE.Quaternion(),enginePos=new THREE.Vector3(),carVel=new THREE.Vector3(),exhaustPos=new THREE.Vector3();let exhaust,puffClock=0;
 let frames=0,frameTime=0,fps=0,hudElapsed=0,driveView='interior';
 
 function sample(d){
@@ -61,6 +72,9 @@ function pose(dt=0){
     forward.copy(q).sub(p).normalize();right.crossVectors(forward,up).normalize();
     const carPosition=p.clone().addScaledVector(right,state.lateral);
     lookMatrix.lookAt(carPosition,carPosition.clone().add(forward),up);baseQ.setFromRotationMatrix(lookMatrix);
+    // the car's own heading on the road: it points (and the camera with it) where it is steering
+    baseQ.multiply(headingQ.setFromAxisAngle(up,-(state.heading||0)));
+    forward.applyAxisAngle(up,-(state.heading||0));right.crossVectors(forward,up).normalize();
     garage?.sync(carPosition,baseQ,false);
     camera.position.copy(garage?.eye(driveView)||carPosition.clone().add(new THREE.Vector3(0,1.72,0)));
     camera.quaternion.copy(baseQ).multiply(viewQ);
@@ -193,7 +207,7 @@ $('#retry')?.addEventListener('click',()=>location.reload());
 const clock=new THREE.Clock();
 renderer.setAnimationLoop(()=>{
   const elapsed=clock.getDelta(),dt=Math.min(elapsed,.05);if(!ready)return;
-  const wasCruise=state.cruise;if(!state.free&&!garage?.isOpen)stepDrive(state,keys,dt,1490,garage.topSpeed);if(!garage?.isOpen){const cars=traffic?.obstacles()||[],pol0=police?.obstacle(),withPol=pol0?[...cars,pol0]:cars;cows?.update(dt,state,withPol,pol0?[pol0]:[]);dogs?.update(dt,state,withPol);police?.update(dt,state,cars);
+  const wasCruise=state.cruise;if(!state.free&&!garage?.isOpen)stepDrive(state,keys,dt,1490,garage.topSpeed,{analog:stick,boost:document.body.dataset.driver==='imrashka'?3:1});garage?.setDrive?.(state.wheelAngle||0,state.roll||0);if(!garage?.isOpen){const cars=traffic?.obstacles()||[],pol0=police?.obstacle(),withPol=pol0?[...cars,pol0]:cars;cows?.update(dt,state,withPol,pol0?[pol0]:[]);dogs?.update(dt,state,withPol);police?.update(dt,state,cars);
     const pol=police?.obstacle();traffic?.update(dt,state,[...(cows?.obstacles()||[]),...(dogs?.obstacles()||[]).filter(g=>!g.dead)],pol?[pol]:[]);
     birds?.update(dt,camera,carPosW,carFwdW);}
     audio.update(dt,{player:state,cows:cows?.obstacles()||[],dogs:dogs?.obstacles()||[],police:police?.sound(),paused:!!garage?.isOpen});smoke?.update(dt,garage?.hasCar&&!state.free?enginePos:null,state.damage||0,carVel);
