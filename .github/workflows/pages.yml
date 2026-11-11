@@ -52,7 +52,7 @@ jobs:
       - name: Prepare static site
         run: |
           mkdir _site
-          cp index.html ruslan.png imrashka.png *.js *.css route.json street.part*.bin _site/
+          cp index.html ruslan.png imrashka.png poster.jpg *.js *.css route.json street.part*.bin _site/
           cp -R cars textures models vendor backgrounds sounds fonts music _site/
           touch _site/.nojekyll
       - name: Configure GitHub Pages

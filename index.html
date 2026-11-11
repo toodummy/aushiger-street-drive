@@ -4,7 +4,7 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="description" content="Explore a reference-based reconstruction of the north entrance and main street of Aushiger. Drive south or explore with a free camera.">
 <title>Go To Aushiger VII</title>
-<link rel="preload" href="fonts/bowlby-one-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin><link rel="preload" href="fonts/oswald-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="poster.jpg?v=1" as="image"><link rel="preload" href="fonts/bowlby-one-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin><link rel="preload" href="fonts/oswald-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="style.css?v=13">
 <script type="importmap">{"imports":{"three":"./vendor/three/build/three.module.js","three/addons/":"./vendor/three/examples/jsm/"}}</script>
 <style>
@@ -87,7 +87,7 @@ footer,footer *,#menu-toggle,header button{-webkit-user-select:none;user-select:
 .driver-picker .driver-choice{flex:1 1 0;height:auto;min-height:0;cursor:pointer;opacity:.62;transition:opacity .2s,border-color .2s}
 .driver-picker .driver-choice[aria-pressed=true]{opacity:1}
 </style>
-<link rel="stylesheet" href="gta.css?v=5">
+<link rel="stylesheet" href="gta.css?v=6">
 </head>
 <body>
 <header class="panel" id="hud-menu">
@@ -124,7 +124,7 @@ footer,footer *,#menu-toggle,header button{-webkit-user-select:none;user-select:
  <button id="begin-drive" class="primary">Drive Lada 2106</button>
  <p class="garage-controls">W / S DRIVE <span>·</span> A / D STEER <span>·</span> MOUSE LOOK</p></div>
  </div></section>
-<div id="load"><div class="loading-card"><h2 class="load-title" aria-label="Go To Aushiger VII"><span aria-hidden="true"><b>G</b><i>o</i> <b>T</b><i>o</i> <b>A</b><i>ushiger</i> <b class="num">VII</b></span></h2><div class="load-city"><span class="city-name">Aushiger City</span></div><p id="progress">Preparing your drive</p><div class="loading-track"><i id="loadbar"></i></div><button id="retry" hidden>Reload</button></div></div>
+<div id="load"><div class="loading-card poster-card"><img class="poster" src="poster.jpg?v=1" alt="Go To Aushiger VII — Aushiger City: Ruslan Mukhadinovich and Imrashka with the Lada" fetchpriority="high"><p id="progress">Preparing your drive</p><div class="loading-track"><i id="loadbar"></i></div><button id="retry" hidden>Reload</button></div></div>
 <script type="module">
 import('./app-v3.js?v=63').catch(error=>{
   console.error(error);

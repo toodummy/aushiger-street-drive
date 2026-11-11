@@ -119,3 +119,12 @@ select{border-radius:2px!important;background:#000!important;color:#fff!importan
   #look-hint{bottom:auto!important;top:72px}
 }
 @media (max-width:420px){#stick{width:136px;height:136px;right:14px;bottom:16px}#stick .stick-knob{width:58px;height:58px;margin:-29px 0 0 -29px}}
+
+/* ---------- loading screen: the poster and the loading status, nothing else ---------- */
+#load{background:#050607!important;overflow:hidden}
+#load:before{content:"";position:absolute;inset:-40px;background:url(poster.jpg?v=1) center/cover;filter:blur(28px) brightness(.45);transform:scale(1.1)}
+.poster-card{position:relative;width:auto!important;max-width:96vw;display:flex;flex-direction:column;align-items:center}
+.poster-card .poster{display:block;height:min(80dvh,calc(96vw * 1312 / 1199));width:auto;max-width:96vw;aspect-ratio:1199/1312;object-fit:contain;border-radius:3px;box-shadow:0 18px 60px rgba(0,0,0,.6)}
+.poster-card #progress{margin:12px 0 0;text-align:center;text-shadow:0 1px 3px #000}
+.poster-card .loading-track{width:min(420px,80vw);margin-top:10px}
+body:not(.ready) #menu-toggle{display:none!important}
