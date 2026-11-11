@@ -148,7 +148,7 @@ export function createDogs(scene,sample,{onHit}={}){
         if(g.d<player.distance-80||g.d<2||g.d>1495){g.active=false;g.obj.visible=false;}
       }
     },
-    obstacles(){return dogs.filter(g=>g.active).map(g=>({d:g.d,lat:g.lat,dead:g.dead,small:true}));}
+    obstacles(){return dogs.filter(g=>g.active).map(g=>({d:g.d,lat:g.lat,dead:g.dead,small:true,chase:g.state==='chase'}));}
   };
   function place(g){
     const p=world(g.d,g.lat),dir=fwd.clone().multiplyScalar(Math.cos(g.heading)).addScaledVector(right,Math.sin(g.heading));

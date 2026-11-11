@@ -2,15 +2,19 @@ import * as THREE from 'three';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {loadCar} from './garage.js?v=51';
 import {crumple,ownGeometry} from './damage.js?v=1';
+import {makeCar,STYLE_KEYS,STYLES} from './carfactory.js?v=1';
 
 // Random village traffic: oncoming cars in the left lane, slow cars ahead you can pass,
 // and faster cars that come up behind you and overtake when the other lane is clear.
 // Everything works in route coordinates: d = metres along the road, lat = metres right of centre.
 const LANE=1.7, CAR_LEN=4.3, CAR_W=1.75;
 const PAINTS=['#ece9df','#9b1c1c','#1f3f75','#2f5d3a','#d9c9a2','#151618','#6d7f8e','#c4682a','#6e2338','#b8b8b0','#2a6f86'];
+// Ladas are downloaded models; the German and Japanese cars are built in code (no download).
+// The big Kalina file is only fetched on computers to spare mobile data.
+const PHONE=matchMedia('(max-width:820px)').matches||matchMedia('(pointer:coarse)').matches;
 const MODELS=[
-  {url:'./cars/lada-2106.glb?v=6',paint:/Lada_Beige/},
-  {url:'./cars/lada-kalina.glb',paint:/Kalina_Blue/}
+  {url:'./cars/lada-2106.glb?v=7',paint:/Lada_Beige/,weight:3},
+  ...(PHONE?[]:[{url:'./cars/lada-kalina.glb',paint:/Kalina_Blue/,weight:1}])
 ];
 
 // Bake a loaded car into one mesh per material, so each traffic car costs ~20 draw calls, not 350.
@@ -50,16 +54,18 @@ export function createTraffic(scene,sample,{onPlayerHit}={}){
   const tmpP=new THREE.Vector3(),tmpQ=new THREE.Vector3(),fwd=new THREE.Vector3(),right=new THREE.Vector3();
   let spawnClock=2,id=0;
   // Load in the background after the world is ready; traffic starts when the first model arrives.
+  for(const key of STYLE_KEYS){const c=makeCar(key);const t=bake(c.root,/^Paint$/);t.colors=STYLES[key].colors;t.weight=key==='jp_suv'||key==='de_exec'?1.4:1;templates.push(t);}
   (async()=>{for(const m of MODELS){try{
     const r=await fetch(m.url);if(!r.ok)continue;
     const car=await loadCar([new File([await r.arrayBuffer()],m.url.split('/').pop().split('?')[0])]);
-    templates.push(bake(car.root,m.paint));
+    const t=bake(car.root,m.paint);t.weight=m.weight;templates.push(t);
   }catch(e){console.warn('Traffic model skipped',e);}}})();
 
   function make(){
-    const t=templates[Math.floor(Math.random()*templates.length)];
+    let total=templates.reduce((n,t)=>n+(t.weight||1),0),pick=Math.random()*total,t=templates[0];
+    for(const x of templates){pick-=x.weight||1;if(pick<=0){t=x;break;}}
     const obj=t.group.clone();
-    if(t.paint){const i=t.group.children.indexOf(t.paint),mesh=obj.children[i];mesh.material=t.paint.material.clone();mesh.material.color.set(PAINTS[Math.floor(Math.random()*PAINTS.length)]);obj.userData.paint=mesh.material;}
+    if(t.paint){const i=t.group.children.indexOf(t.paint),mesh=obj.children[i],list=t.colors||PAINTS;mesh.material=t.paint.material.clone();mesh.material.color.set(list[Math.floor(Math.random()*list.length)]);obj.userData.paint=mesh.material;}
     obj.name='Traffic car';scene.add(obj);return obj;
   }
   function spawn(kind,player){
