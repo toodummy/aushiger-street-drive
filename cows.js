@@ -6,7 +6,7 @@ import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 // across the road, graze, lift the tail to drop a pat or take a leak, step aside for cars, and die
 // if you hit them fast: the cow is thrown, falls on its side and stays on the road.
 // Positions are route coordinates: d = metres along the road, lat = metres right of centre.
-const MAX_PATS=40,MAX_PUDDLES=10,MAX_COWS=8,FAR=32; // beyond FAR metres a light version of the cow is drawn
+const MAX_PATS=40,MAX_PUDDLES=10,MAX_COWS=12,FAR=32; // beyond FAR metres a light version of the cow is drawn
 const COATS=[
   {base:'#5b3521',patch:'#efe6da',spots:.38},  // brown and white (Simmental-like)
   {base:'#f2eee6',patch:'#17130f',spots:.52},  // Holstein black and white
@@ -15,6 +15,27 @@ const COATS=[
   {base:'#9b6a43',patch:'#ece2d2',spots:.3},   // light tan with white
   {base:'#6a5446',patch:'#6a5446',spots:0}     // Caucasian grey-brown
 ];
+// Caucasian water buffalo: slate-black, sparse hair, heavier and taller, wide swept-back horns
+const BUFFALO_COATS=[{base:'#2a2827',patch:'#2a2827',spots:0},{base:'#353130',patch:'#353130',spots:0},{base:'#22201f',patch:'#22201f',spots:0}];
+const hornMat=new THREE.MeshStandardMaterial({name:'BuffaloHorn',color:'#3b3631',roughness:.55});
+let hornGeo=null;
+function buffaloHorns(){
+  if(hornGeo)return hornGeo;
+  const parts=[];
+  for(const s of [-1,1]){
+    // out from the top of the head, sweeping back and curling up at the tips (neck space, front = -z)
+    const curve=new THREE.CatmullRomCurve3([[.06,.08,-.53],[.22,.13,-.5],[.4,.14,-.38],[.5,.2,-.2],[.47,.33,-.07],[.36,.41,-.04]].map(([x,y,z])=>new THREE.Vector3(s*x,y,z)));
+    const g=new THREE.TubeGeometry(curve,24,1,8,false),p=g.attributes.position,c=new THREE.Vector3(),v=new THREE.Vector3();
+    for(let i=0;i<=24;i++){const t=i/24;curve.getPointAt(t,c);const r=.085*(1-t)**.8+.01;
+      for(let j=0;j<=8;j++){const k=i*9+j;v.fromBufferAttribute(p,k).sub(c).multiplyScalar(r);p.setXYZ(k,c.x+v.x,c.y+v.y,c.z+v.z);}}
+    g.computeVertexNormals();parts.push(g);
+  }
+  // merge the two horns into one geometry
+  const n=parts[0].attributes.position.count,idx=parts[0].index.count,pos=new Float32Array(n*6),nor=new Float32Array(n*6),ind=[];
+  parts.forEach((g,k)=>{pos.set(g.attributes.position.array,k*n*3);nor.set(g.attributes.normal.array,k*n*3);for(let i=0;i<idx;i++)ind.push(g.index.array[i]+k*n);});
+  hornGeo=new THREE.BufferGeometry();hornGeo.setAttribute('position',new THREE.BufferAttribute(pos,3));hornGeo.setAttribute('normal',new THREE.BufferAttribute(nor,3));hornGeo.setIndex(ind);
+  return hornGeo;
+}
 
 function coatMaterial(coat,seed){
   const m=new THREE.MeshStandardMaterial({color:'#ffffff',roughness:.86,metalness:0});
@@ -83,8 +104,9 @@ function loadTemplate(url){
   });
 }
 
-function buildCow(template,i,farTemplate){
-  const coat=COATS[i%COATS.length],hide=coatMaterial(coat,i*3.7+.5);
+function buildCow(template,i,farTemplate,buffalo=false){
+  const coat=buffalo?BUFFALO_COATS[i%BUFFALO_COATS.length]:COATS[i%COATS.length],hide=coatMaterial(coat,i*3.7+.5);
+  if(buffalo){hide.roughness=.7;}
   const model=template.clone(true);
   let far=null;
   if(farTemplate){far=farTemplate.clone(true);far.traverse(o=>{if(o.isMesh){o.castShadow=true;if(o.material.name==='Hide')o.material=hide;}});far.visible=false;}
@@ -95,9 +117,14 @@ function buildCow(template,i,farTemplate){
   const legs=[['FrontUpperL','FrontLowerL',0,1],['FrontUpperR','FrontLowerR',Math.PI,1],['HindUpperL','HindLowerL',Math.PI,-1],['HindUpperR','HindLowerR',0,-1]]
     .map(([u,l,phase,front])=>({upper:part(u),lower:part(l),phase,front}));
   const stream=new THREE.Mesh(extra.stream,mats.stream);stream.position.set(0,1.06,1.02);stream.visible=false;model.add(stream);
-  const holder=new THREE.Group();holder.name='Village cow';holder.add(model);if(far)holder.add(far);
+  if(buffalo){
+    // swap the short cow horns for big buffalo horns, on the near and the far model
+    for(const m of [model,far])if(m){m.traverse(o=>{if(o.isMesh&&o.material?.name==='Horn')o.visible=false;});const h=new THREE.Mesh(buffaloHorns(),hornMat);h.castShadow=true;m.getObjectByName('Neck').add(h);}
+  }
+  const holder=new THREE.Group();holder.name=buffalo?'Village buffalo':'Village cow';holder.add(model);if(far)holder.add(far);
+  if(buffalo)holder.scale.set(1.12,1.1,1.14);
   const farParts=far&&{model:far,neck:far.getObjectByName('Neck'),tail:far.getObjectByName('Tail'),legs:legs.map(l=>({upper:far.getObjectByName(l.upper.name),lower:far.getObjectByName(l.lower.name)}))};
-  return {obj:holder,model,body:model,neck,tail:part('Tail'),legs,stream,farParts};
+  return {obj:holder,model,body:model,neck,tail:part('Tail'),legs,stream,farParts,buffalo};
 }
 
 export function createCows(scene,sample,{onHit}={}){
@@ -110,10 +137,11 @@ export function createCows(scene,sample,{onHit}={}){
   function frame(d){a.copy(sample(d));b.copy(sample(d+1));fwd.copy(b).sub(a).normalize();right.crossVectors(fwd,up).normalize();return a;}
   function world(d,lat,out=new THREE.Vector3()){frame(d);return out.copy(a).addScaledVector(right,lat);}
   function spawnHerd(center){
-    const n=2+Math.floor(Math.random()*3);
+    const n=2+Math.floor(Math.random()*3),herdKind=Math.random();   // buffalo herd, cow herd, or mixed
     for(let k=0;k<n;k++){
-      let c=cows.find(c=>!c.active);
-      if(!c){if(cows.length>=MAX_COWS)break;const m=buildCow(template,built++,farTemplate);scene.add(m.obj);c={...m};cows.push(c);}
+      const buffalo=herdKind<.35||(herdKind>.8&&k===0);
+      let c=cows.find(c=>!c.active&&c.buffalo===buffalo);
+      if(!c){if(cows.length>=MAX_COWS)break;const m=buildCow(template,built++,farTemplate,buffalo);scene.add(m.obj);c={...m};cows.push(c);}
       Object.assign(c,{active:true,dead:false,d:center+rnd(-18,18),lat:rnd(-4.5,4.5),heading:Math.random()*Math.PI*2,speed:0,state:'walk',timer:rnd(2,6),walk:Math.random()*6,acted:0,patDone:false,turn:rnd(-.3,.3),puddle:null,fall:0,vd:0,vl:0,spin:0,side:1,deadAge:0});
       c.model.position.set(0,0,0);c.model.rotation.set(0,0,0);c.obj.visible=true;
     }
@@ -140,19 +168,22 @@ export function createCows(scene,sample,{onHit}={}){
     pud.userData={age:0};scene.add(pud);puddles.push(pud);c.puddle=pud;
     if(puddles.length>MAX_PUDDLES){const old=puddles.shift();scene.remove(old);old.material.dispose();}
   }
-  function kill(c,player){
+  // hitter: the player (state) or another vehicle {d,lat,speed,onHit}
+  function kill(c,hitter,isPlayer){
     c.dead=true;c.state='dead';c.stream.visible=false;
-    const v=player.speed;c.vd=v*.75+Math.sign(v)*2;c.vl=(c.lat-player.lateral||(Math.random()-.5))*1.6+(Math.random()-.5)*2;
+    const heavy=c.buffalo?1.45:1,v=isPlayer?hitter.speed:hitter.speed,carLat=isPlayer?hitter.lateral:hitter.lat,carD=isPlayer?hitter.distance:hitter.d;
+    c.vd=(v*.75+Math.sign(v)*2)/heavy;c.vl=(c.lat-carLat||(Math.random()-.5))*1.6/heavy+(Math.random()-.5)*2;
     c.spin=(Math.random()-.5)*3;c.side=Math.random()<.5?-1:1;c.fall=0;
-    // the car keeps going, a bit slower and dented
-    const amount=Math.min(.35,.05+Math.abs(v)/70);
-    player.speed*=.72;
-    const point=world(c.d,c.lat);point.y+=.7;onHit?.({point,amount,dir:fwd.clone().multiplyScalar(Math.sign(player.distance-c.d)||-1)});
+    // the car keeps going, a bit slower and dented (a buffalo does more damage)
+    const amount=Math.min(.45,(.05+Math.abs(v)/70)*heavy);
+    if(isPlayer)hitter.speed*=c.buffalo?.6:.72;
+    const point=world(c.d,c.lat);point.y+=.7;const h={point,amount,dir:fwd.clone().multiplyScalar(Math.sign(carD-c.d)||-1)};
+    if(isPlayer)onHit?.(h);else hitter.onHit?.(h);
   }
 
   return {
     get count(){return cows.filter(c=>c.active).length;},
-    update(dt,player,cars=[]){
+    update(dt,player,cars=[],rams=[]){
       dt=Math.min(dt,.05);if(!template)return;
       herdClock-=dt;
       if(herdClock<=0){
@@ -200,9 +231,12 @@ export function createCows(scene,sample,{onHit}={}){
         c.lat=THREE.MathUtils.clamp(c.lat,-5.4,5.4);
         // collision with the player's car: slow bump pushes, a real hit kills the cow
         if(Math.abs(c.d-player.distance)<3.0&&Math.abs(c.lat-player.lateral)<1.6){
-          if(Math.abs(player.speed)>3.5){kill(c,player);continue;}
+          if(Math.abs(player.speed)>3.5){kill(c,player,true);continue;}
           player.speed=0;player.cruise=false;player.distance=c.d-Math.sign(c.d-player.distance||1)*3.0;
         }
+        // other vehicles that run animals down (the police car)
+        let rammed=false;for(const r of rams){if(Math.abs(c.d-r.d)<3.0&&Math.abs(c.lat-r.lat)<1.6&&Math.abs(r.speed)>3){kill(c,r,false);rammed=true;break;}}
+        if(rammed)continue;
         const p=world(c.d,c.lat),dir=fwd.clone().multiplyScalar(Math.cos(c.heading)).addScaledVector(right,Math.sin(c.heading));
         m4.lookAt(p,p.clone().add(dir),up);c.obj.position.copy(p);c.obj.quaternion.setFromRotationMatrix(m4);
         // walk cycle: diagonal pairs, front knees fold back, hind hocks fold forward
@@ -230,6 +264,6 @@ export function createCows(scene,sample,{onHit}={}){
       for(const pat of pats){const u=pat.userData;if(u.landed)continue;u.vy-=9.8*dt;pat.position.y+=u.vy*dt;pat.scale.setScalar(Math.min(1,pat.scale.x+dt*2));if(pat.position.y<=u.ground){pat.position.y=u.ground;u.landed=true;pat.scale.set(1.1,.85,1.1);}}
       for(const pud of puddles){pud.userData.age+=dt;if(pud.userData.age>40)pud.material.opacity=Math.max(0,.5-(pud.userData.age-40)*.02);}
     },
-    obstacles(){return cows.filter(c=>c.active).map(c=>({d:c.d,lat:c.lat,dead:c.dead}));}
+    obstacles(){return cows.filter(c=>c.active).map(c=>({d:c.d,lat:c.lat,dead:c.dead,buffalo:c.buffalo}));}
   };
 }

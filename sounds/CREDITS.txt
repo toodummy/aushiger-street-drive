@@ -1,0 +1,20 @@
+Animal sounds in this folder are trimmed, level-matched clips of public-domain (CC0) field
+recordings from Freesound, taken from the ESC-50 dataset (K. J. Piczak, https://github.com/karolpiczak/ESC-50).
+CC0 needs no attribution; the sources are listed anyway, with thanks:
+
+dog1.mp3: dogbark.wav (http://www.freesound.org/people/ipears1/sounds/118072/) by ipears1
+dog2.mp3: Dog Bark 4.wav (http://www.freesound.org/people/esperri/sounds/118964/) by esperri
+dog3.mp3: LBS_FX DOG Small Alert Bark001.wav (http://www.freesound.org/people/LittleBigSounds/sounds/163459/) by LittleBigSounds
+dog4.mp3: Dog Barks.wav (http://www.freesound.org/people/UnderlinedDesigns/sounds/191687/) by UnderlinedDesigns
+dog5.mp3: FX_Dog Barking.wav (http://www.freesound.org/people/davidmenke/sounds/231762/) by davidmenke
+dog6.mp3: Dog bark2.wav (http://www.freesound.org/people/MisterTood/sounds/9032/) by MisterTood
+cow1.mp3: Two bulls singing in the desert of Arizona (http://www.freesound.org/people/felix.blume/sounds/202111/) by felix.blume
+cow2.mp3: Two bulls singing in the desert of Arizona (http://www.freesound.org/people/felix.blume/sounds/202111/) by felix.blume
+cow3.mp3: ambience-Blaafarveverket 02-090721.wav (http://www.freesound.org/people/ra_gun/sounds/81269/) by ra_gun
+cow4.mp3: Cow mooing in south of France (Limousin) (http://www.freesound.org/people/felix.blume/sounds/163727/) by felix.blume
+cow5.mp3: Cows muing.wav (http://www.freesound.org/people/Kulanen/sounds/104877/) by Kulanen
+cow6.mp3: Distressed Mother Cow and Calves.wav (http://www.freesound.org/people/lolamadeus/sounds/194899/) by lolamadeus
+rooster1.mp3: rooster cock-a-doodle-doo (http://www.freesound.org/people/videog/sounds/149189/) by videog
+rooster2.mp3: Rooster - Crow 2 - 96kHz.wav (http://www.freesound.org/people/JarredGibb/sounds/233160/) by JarredGibb
+crow1.mp3: crow 1 (http://www.freesound.org/people/pepv/sounds/188287/) by pepv
+crow2.mp3: Black Bird/Crow (http://www.freesound.org/people/stair/sounds/129264/) by stair

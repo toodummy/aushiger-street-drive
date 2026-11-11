@@ -4,7 +4,7 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="description" content="Explore a reference-based reconstruction of the north entrance and main street of Aushiger. Drive south or explore with a free camera.">
 <title>Go To Aushiger VII</title>
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=Cormorant+Garamond:ital,wght@1,500;1,600&family=Marcellus+SC&display=swap">
+<link rel="preload" href="fonts/bowlby-one-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin><link rel="preload" href="fonts/oswald-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="style.css?v=13">
 <script type="importmap">{"imports":{"three":"./vendor/three/build/three.module.js","three/addons/":"./vendor/three/examples/jsm/"}}</script>
 <style>
@@ -87,6 +87,7 @@ footer,footer *,#menu-toggle,header button{-webkit-user-select:none;user-select:
 .driver-picker .driver-choice{flex:1 1 0;height:auto;min-height:0;cursor:pointer;opacity:.62;transition:opacity .2s,border-color .2s}
 .driver-picker .driver-choice[aria-pressed=true]{opacity:1}
 </style>
+<link rel="stylesheet" href="gta.css?v=3">
 </head>
 <body>
 <header class="panel" id="hud-menu">
@@ -111,7 +112,7 @@ footer,footer *,#menu-toggle,header button{-webkit-user-select:none;user-select:
  <h2 id="garage-title">Choose your ride.</h2>
  </div>
  <div id="car-preview" aria-label="Rotating 3D car preview"><img id="car-preview-fallback" src="cars/lada-21074.jpg" alt="Lada 2107" hidden><span id="preview-label">DRAG TO ROTATE</span></div>
- <div class="driver-picker"><span>PICK YOUR DRIVER</span><button type="button" class="driver-choice" data-driver="ruslan" aria-pressed="true" aria-label="Ruslan Mukhadinovich"><img src="ruslan.png?v=2" alt="Ruslan Mukhadinovich"><strong>Ruslan Mukhadinovich</strong><small>✓ SELECTED</small></button><button type="button" class="driver-choice" data-driver="imrashka" aria-pressed="false" aria-label="Imrashka"><img src="imrashka.png?v=1" alt="Imrashka"><strong>Imrashka</strong><small>TAP TO PICK</small></button></div>
+ <div class="driver-picker"><span>PICK YOUR DRIVER</span><button type="button" class="driver-choice" data-driver="ruslan" aria-pressed="true" aria-label="Ruslan Mukhadinovich"><img src="ruslan.png?v=3" alt="Ruslan Mukhadinovich"><strong>Ruslan Mukhadinovich</strong><small>✓ SELECTED</small></button><button type="button" class="driver-choice" data-driver="imrashka" aria-pressed="false" aria-label="Imrashka"><img src="imrashka.png?v=1" alt="Imrashka"><strong>Imrashka</strong><small>TAP TO PICK</small></button></div>
  <div class="showroom-bottom"><div class="selection-label">SELECT YOUR CAR <span>01 / 02</span></div><div id="car-list" aria-label="Available cars"></div>
  <fieldset id="seat-controls" hidden><legend>Driver’s seat</legend>
  <label>Front direction<select id="car-facing"><option value="0">Original</option><option value="3.141592653589793">Turn 180°</option></select></label>
@@ -124,7 +125,7 @@ footer,footer *,#menu-toggle,header button{-webkit-user-select:none;user-select:
  </div></section>
 <div id="load"><div class="loading-card"><h2 class="load-title" aria-label="Go To Aushiger VII"><span aria-hidden="true"><b>G</b><i>o</i> <b>T</b><i>o</i> <b>A</b><i>ushiger</i> <b class="num">VII</b></span></h2><div class="load-city"><span class="city-name">Aushiger City</span></div><p id="progress">Preparing your drive</p><div class="loading-track"><i id="loadbar"></i></div><button id="retry" hidden>Reload</button></div></div>
 <script type="module">
-import('./app-v3.js?v=60').catch(error=>{
+import('./app-v3.js?v=62').catch(error=>{
   console.error(error);
   const progress=document.querySelector('#progress');
   if(progress)progress.textContent='Unable to start: '+error.message;

@@ -1,12 +1,12 @@
 import {addLandscape} from './landscape.js?v=9';
 import {createGarage} from './garage.js?v=51';
-import {createTraffic} from './traffic.js?v=9';
-import {createCows} from './cows.js?v=3';
-import {createDogs} from './dogs.js?v=3';
+import {createTraffic} from './traffic.js?v=10';
+import {createCows} from './cows.js?v=5';
+import {createDogs} from './dogs.js?v=4';
 import {createBirds} from './birds.js?v=1';
-import {createAudio} from './audio.js?v=2';
+import {createAudio} from './audio.js?v=3';
 import {createExhaust} from './exhaust.js?v=1';
-import {createPolice} from './police.js?v=2';
+import {createPolice} from './police.js?v=3';
 import {crumple,repair,createSmoke} from './damage.js?v=1';
 import * as THREE from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
@@ -78,7 +78,7 @@ function updateControls(){
 }
 function takeHit({point,dir,amount}){state.damage=Math.min(1,(state.damage||0)+amount);crumple(garage?.carRoot,point,dir,.95,.1+amount*.5);shake=Math.max(shake,.25+amount);updateDamage();}
 document.querySelector('footer')?.addEventListener('contextmenu',e=>e.preventDefault());
-{const sb=document.getElementById('sound-toggle'),mb=document.getElementById('music-toggle');const show=()=>{if(sb)sb.textContent=audio.enabled?'🔊 Sound on':'🔇 Sound off';if(mb){mb.textContent=audio.music?'🎵 Music on':'🎵 Music off';mb.setAttribute('aria-pressed',String(audio.music));}};show();sb?.addEventListener('click',()=>{audio.setEnabled(!audio.enabled);show();});mb?.addEventListener('click',()=>{audio.setMusic(!audio.music);show();});}
+{const sb=document.getElementById('sound-toggle'),mb=document.getElementById('music-toggle');const show=()=>{if(sb){sb.textContent=audio.enabled?'🔊 Sound on':'🔇 Sound off';sb.setAttribute('aria-pressed',String(audio.enabled));}if(mb){mb.textContent=audio.music?'🎵 Music on':'🎵 Music off';mb.setAttribute('aria-pressed',String(audio.music));}};show();sb?.addEventListener('click',()=>{audio.setEnabled(!audio.enabled);show();});mb?.addEventListener('click',()=>{audio.setMusic(!audio.music);show();});}
 let shake=0;function updateDamage(){const el=document.getElementById('damage');if(!el)return;const ok=Math.round((1-(state.damage||0))*100);el.textContent=ok+'%';el.parentElement.classList.toggle('hurt',ok<70);el.parentElement.classList.toggle('wrecked',ok<35);const w=document.getElementById('wrecked-msg');if(w)w.hidden=ok>0;}
 document.getElementById('wrecked-msg')?.addEventListener('click',()=>reset(state.distance));
 function reset(distance=START){repair(garage?.carRoot);Object.assign(state,createDriveState(),{distance:Math.max(START,distance)});updateDamage();keys.clear();camera.fov=68;camera.updateProjectionMatrix();pose();updateControls();}
@@ -193,8 +193,8 @@ $('#retry')?.addEventListener('click',()=>location.reload());
 const clock=new THREE.Clock();
 renderer.setAnimationLoop(()=>{
   const elapsed=clock.getDelta(),dt=Math.min(elapsed,.05);if(!ready)return;
-  const wasCruise=state.cruise;if(!state.free&&!garage?.isOpen)stepDrive(state,keys,dt,1490,garage.topSpeed);if(!garage?.isOpen){const cars=traffic?.obstacles()||[];cows?.update(dt,state,cars);dogs?.update(dt,state,cars);police?.update(dt,state);
-    const pol=police?.obstacle();traffic?.update(dt,state,[...(cows?.obstacles()||[]),...(dogs?.obstacles()||[]).filter(g=>!g.dead),...(pol?[pol]:[])]);
+  const wasCruise=state.cruise;if(!state.free&&!garage?.isOpen)stepDrive(state,keys,dt,1490,garage.topSpeed);if(!garage?.isOpen){const cars=traffic?.obstacles()||[],pol0=police?.obstacle(),withPol=pol0?[...cars,pol0]:cars;cows?.update(dt,state,withPol,pol0?[pol0]:[]);dogs?.update(dt,state,withPol);police?.update(dt,state,cars);
+    const pol=police?.obstacle();traffic?.update(dt,state,[...(cows?.obstacles()||[]),...(dogs?.obstacles()||[]).filter(g=>!g.dead)],pol?[pol]:[]);
     birds?.update(dt,camera,carPosW,carFwdW);}
     audio.update(dt,{player:state,cows:cows?.obstacles()||[],dogs:dogs?.obstacles()||[],police:police?.sound(),paused:!!garage?.isOpen});smoke?.update(dt,garage?.hasCar&&!state.free?enginePos:null,state.damage||0,carVel);
     if(exhaust){if(garage?.hasCar&&!state.free&&!state.wrecked&&!garage?.isOpen){const pull=keys.has('KeyW')||keys.has('ArrowUp')||(state.cruise&&state.speed<10.5);puffClock-=dt;

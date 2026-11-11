@@ -91,6 +91,7 @@ export function createTraffic(scene,sample,{onPlayerHit,exhaust}={}){
     c.obj.position.copy(tmpP);c.obj.quaternion.setFromRotationMatrix(m4);
   }
   // nearest thing ahead of car c within its lane band
+  let solidList=[];
   function ahead(c,lat,player,cows){
     let best=null,gap=Infinity;
     const consider=(d,l,len,speedAlong,ref)=>{
@@ -100,13 +101,16 @@ export function createTraffic(scene,sample,{onPlayerHit,exhaust}={}){
     for(const o of cars)if(o!==c)consider(o.d,o.lat,o.len,o.speed*o.dir*c.dir,o);
     consider(player.distance,player.lateral,CAR_LEN,player.speed*c.dir,'player');
     for(const w of cows)consider(w.d,w.lat,2.4,0,'cow');
+    for(const v of solidList)consider(v.d,v.lat,v.len,v.speed*c.dir,v);
     return best;
   }
   function oncomingClear(c,len){return !cars.some(o=>o.dir!==c.dir&&(o.d-c.d)*c.dir>-5&&(o.d-c.d)*c.dir<len);}
 
   return {
     get count(){return cars.length;},
-    update(dt,player,cows=[]){
+    // solids: other vehicles not run by this module (the police car): {d,lat,len,w,speed,onHit}
+    update(dt,player,cows=[],solids=[]){
+      solidList=solids;
       if(!templates.length)return;
       spawnClock-=dt;
       if(spawnClock<=0){
@@ -128,7 +132,8 @@ export function createTraffic(scene,sample,{onPlayerHit,exhaust}={}){
         }
         if(c.passing){
           const pd=c.passing.ref==='player'?player.distance:c.passing.ref==='cow'?c.passing.d:c.passing.ref.d;
-          if((pd-c.d)*c.dir<-(c.len+7)||(!oncomingClear(c,60)&&(pd-c.d)*c.dir>2)){c.passing=null;c.targetLat=home;}
+          if(typeof pd!=='number'){c.passing=null;c.targetLat=home;}
+          else if((pd-c.d)*c.dir<-(c.len+7)||(!oncomingClear(c,60)&&(pd-c.d)*c.dir>2)){c.passing=null;c.targetLat=home;}
         }
         const blk=ahead(c,c.targetLat,player,cows,c.passing),blk2=c.targetLat!==c.lat?ahead(c,c.lat,player,cows):null;
         let target=c.cruise;
@@ -155,6 +160,23 @@ export function createTraffic(scene,sample,{onPlayerHit,exhaust}={}){
             onPlayerHit?.({point,amount,dir:fwd.clone().multiplyScalar(side)});
           }
           player.distance=c.d+side*reach;
+        }
+        // collisions with other vehicles (police): both get dented, the faster one is slowed
+        for(const v of solids){
+          const sd=c.d-v.d,reachV=(c.len+v.len)/2;
+          if(Math.abs(sd)<reachV&&Math.abs(c.lat-v.lat)<(v.w||1.85)){
+            const side=Math.sign(sd||1),closing=(v.speed-c.speed*c.dir)*side;
+            if(closing>1.2&&c.hitCool<=0){
+              const amount=Math.min(.55,(.04+closing/45)*(c.truck?1.4:1));c.hitCool=.8;
+              const vMid=(v.speed+c.speed*c.dir)/2;c.speed=Math.max(0,(vMid+side*closing*.12)*c.dir);
+              c.damage=Math.min(1,c.damage+amount*(c.truck?.35:1));c.cruise=c.damage>=.999?0:c.baseCruise*(.25+.75*(1-c.damage));
+              const a=sample((c.d+v.d)/2);fwd.copy(sample((c.d+v.d)/2+1)).sub(a).normalize();right.crossVectors(fwd,up).normalize();
+              const point=a.clone().addScaledVector(right,(c.lat+v.lat)/2);point.y+=.6;
+              ownGeometry(c.obj);crumple(c.obj,point,fwd.clone().multiplyScalar(side),1.0,.12+amount*.45);
+              v.onHit?.({point,amount:amount*(c.truck?1.5:1),dir:fwd.clone().multiplyScalar(-side),speedAfter:vMid-side*closing*.12});
+            }
+            c.d=v.d+side*reachV;
+          }
         }
         place(c);
         // exhaust: a puff every so often, more and darker when the engine is pulling (trucks most of all)

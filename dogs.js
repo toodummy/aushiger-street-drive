@@ -148,7 +148,7 @@ export function createDogs(scene,sample,{onHit}={}){
           if(Math.abs(player.speed)>1.8){kill(g,player.speed,player.lateral);player.speed*=.95;const p=world(g.d,g.lat);p.y+=.4;onHit?.({point:p,amount:.02,dir:fwd.clone().multiplyScalar(Math.sign(player.distance-g.d)||-1)});continue;}
           g.lat+=Math.sign(g.lat-player.lateral||1)*dt*2;
         }
-        for(const c of cars){if(Math.abs(g.d-c.d)<2.3&&Math.abs(g.lat-c.lat)<1.05&&c.speed>1.8){kill(g,c.speed*c.dir,c.lat);break;}}
+        for(const c of cars){if(Math.abs(g.d-c.d)<2.3&&Math.abs(g.lat-c.lat)<1.05&&c.speed>1.8){kill(g,c.speed*c.dir,c.lat);if(c.onHit){const p=world(g.d,g.lat);p.y+=.4;c.onHit({point:p,amount:.02,dir:fwd.clone().multiplyScalar(-c.dir)});}break;}}
         if(g.dead)continue;
         place(g);animate(g,t,dt);
         if(g.d<player.distance-80||g.d<2||g.d>1495){g.active=false;g.obj.visible=false;}

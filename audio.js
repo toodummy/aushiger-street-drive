@@ -30,6 +30,7 @@ export function createAudio(){
     ambience=ctx.createGain();ambience.gain.value=1;ambience.connect(master);
     musicBus=ctx.createGain();musicBus.gain.value=musicOn?MUSIC_VOL:0;musicBus.connect(master);
     if(ctx.state!=='running')ctx.resume().catch(()=>{});
+    loadSamples();
     noiseBuf=ctx.createBuffer(1,ctx.sampleRate*2,ctx.sampleRate);const d=noiseBuf.getChannelData(0);let b=0;
     for(let i=0;i<d.length;i++){const w=Math.random()*2-1;b=.97*b+.03*w;d[i]=w*.5+b*2.5;}
     // wind: filtered noise, very low and slowly breathing
@@ -42,6 +43,26 @@ export function createAudio(){
   const panner=pan=>{const p=ctx.createStereoPanner?ctx.createStereoPanner():null;if(p){p.pan.value=Math.max(-1,Math.min(1,pan));}return p;};
   const out=(node,pan)=>{const p=panner(pan);if(p){node.connect(p).connect(ambience);}else node.connect(ambience);};
   const near=(dist,range)=>Math.max(0,1-dist/range)**1.6;
+
+  // Real recordings (CC0 field recordings via the ESC-50 dataset, see sounds/CREDITS.txt):
+  // six dogs, six cows (also used, pitched down, for the buffaloes), roosters and crows.
+  const SAMPLES={dog:[1,2,3,4,5,6],cow:[1,2,3,4,5,6],rooster:[1,2],crow:[1,2]},bufs={};let loading=false;
+  function decode(ab){return new Promise((res,rej)=>{const p=ctx.decodeAudioData(ab,res,rej);if(p&&p.then)p.then(res,rej);});}
+  function loadSamples(){
+    if(loading)return;loading=true;
+    for(const [kind,ids] of Object.entries(SAMPLES)){bufs[kind]=[];
+      for(const i of ids)fetch(`./sounds/${kind}${i}.mp3?v=1`).then(r=>r.ok?r.arrayBuffer():Promise.reject(r.status)).then(decode).then(b=>bufs[kind].push(b)).catch(e=>console.warn('sound',kind,i,e));}
+  }
+  const last={};
+  function playSample(kind,vol,pan,{rate=1,lowpass=0}={}){
+    const list=bufs[kind];if(!list?.length)return false;
+    // never the same clip twice in a row
+    let i=Math.floor(Math.random()*list.length);if(list.length>1&&i===last[kind])i=(i+1)%list.length;last[kind]=i;
+    const src=ctx.createBufferSource();src.buffer=list[i];src.playbackRate.value=rate;
+    const g=ctx.createGain();g.gain.value=vol;let node=src;
+    if(lowpass){const lp=ctx.createBiquadFilter();lp.type='lowpass';lp.frequency.value=lowpass;node.connect(lp);node=lp;}
+    node.connect(g);out(g,pan);src.start();return true;
+  }
 
   function chirpSong(vol,pan){
     // a short phrase: a few quick sweeping notes, sometimes a trill
@@ -176,7 +197,7 @@ export function createAudio(){
   }
   function sirenOff(){if(!siren)return;const s=siren;siren=null;const t=ctx.currentTime;s.g.gain.setTargetAtTime(0,t,.3);setTimeout(()=>{try{s.o.stop();s.lfo.stop();}catch(e){}},1500);}
 
-  let birdClock=1.5,barkClock=4,mooClock=6;
+  let birdClock=1.5,barkClock=6,mooClock=12,roosterClock=40,crowClock=20;
   return {
     get enabled(){return enabled;},
     get music(){return musicOn;},
@@ -193,22 +214,28 @@ export function createAudio(){
         siren.g.gain.setTargetAtTime(.13*Math.max(.08,1-dist/260),ctx.currentTime,.1);if(siren.p)siren.p.pan.value=Math.max(-1,Math.min(1,(police.lat-player.lateral)/6));}
       else sirenOff();
       if(paused)return;
-      birdClock-=dt;if(birdClock<=0){birdClock=rnd(1.2,4.5);chirpSong(rnd(.03,.07),rnd(-.8,.8));if(Math.random()<.35)setTimeout(()=>ctx&&chirpSong(rnd(.02,.05),rnd(-.8,.8)),rnd(200,700));}
+      birdClock-=dt;if(birdClock<=0){birdClock=rnd(3,8);chirpSong(rnd(.03,.07),rnd(-.8,.8));if(Math.random()<.35)setTimeout(()=>ctx&&chirpSong(rnd(.02,.05),rnd(-.8,.8)),rnd(200,700));}
+      // dogs: an occasional bark from a nearby dog; a dog chasing the car barks more, but not nonstop
       barkClock-=dt;
       if(barkClock<=0){
-        barkClock=rnd(3,9);
-        const live=dogs.filter(g=>!g.dead).map(g=>({g,dist:Math.hypot(g.d-player.distance,g.lat-player.lateral)})).filter(x=>x.dist<90).sort((a,b)=>a.dist-b.dist);
-        const chasing=live.find(x=>x.g.chase);
-        const pick=chasing||live[0];
-        if(pick)bark((chasing?.45:.3)*near(pick.dist,90)+.03,(pick.g.lat-player.lateral)/8,chasing?Math.floor(rnd(2,5)):Math.floor(rnd(1,3)));
-        if(chasing){barkClock=rnd(.45,1.1);if(Math.random()<.25)growl(.18*near(pick.dist,40)+.02,(pick.g.lat-player.lateral)/8);}
+        const live=dogs.filter(g=>!g.dead).map(g=>({g,dist:Math.hypot(g.d-player.distance,g.lat-player.lateral)})).filter(x=>x.dist<75).sort((a,b)=>a.dist-b.dist);
+        const chasing=live.find(x=>x.g.chase),pick=chasing||live[0];
+        barkClock=chasing?rnd(1.8,3.5):rnd(12,26);
+        if(pick)playSample('dog',(chasing?.55:.4)*near(pick.dist,75)+.03,(pick.g.lat-player.lateral)/8,{rate:rnd(.94,1.06)});
+        else barkClock=rnd(6,12);
       }
+      // cows and buffaloes: a moo now and then (buffaloes are the same voice, deeper and darker)
       mooClock-=dt;
       if(mooClock<=0){
-        mooClock=rnd(8,20);
+        mooClock=rnd(25,50);
         const live=cows.filter(c=>!c.dead).map(c=>({c,dist:Math.hypot(c.d-player.distance,c.lat-player.lateral)})).filter(x=>x.dist<160);
-        if(live.length){const x=live[Math.floor(Math.random()*live.length)];moo(.3*near(x.dist,160)+.03,(x.c.lat-player.lateral)/8);}
+        if(live.length){const x=live[Math.floor(Math.random()*live.length)],pan=(x.c.lat-player.lateral)/8,v=.4*near(x.dist,160)+.03;
+          if(x.c.buffalo)playSample('cow',v*1.15,pan,{rate:rnd(.7,.78),lowpass:1100});else playSample('cow',v,pan,{rate:rnd(.93,1.05)});}
+        else mooClock=rnd(10,20);
       }
+      // village life far off: a rooster sometimes, crows overhead
+      roosterClock-=dt;if(roosterClock<=0){roosterClock=rnd(70,150);if(player.distance>420)playSample('rooster',rnd(.05,.09),rnd(-.9,.9),{lowpass:3500});}
+      crowClock-=dt;if(crowClock<=0){crowClock=rnd(35,80);playSample('crow',rnd(.04,.08),rnd(-.9,.9));}
     }
   };
 }

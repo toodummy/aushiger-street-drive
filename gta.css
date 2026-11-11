@@ -1,0 +1,103 @@
+/* ===== GTA look: chunky white title letters with a heavy black outline, condensed uppercase
+   HUD type, black translucent panels, white "selected" rows and money-green accents.
+   Fonts are free (SIL Open Font License) and served with the game: Bowlby One and Oswald. ===== */
+@font-face{font-family:"Bowlby One";src:url(fonts/bowlby-one-latin-400-normal.woff2) format("woff2");font-weight:400;font-display:swap}
+@font-face{font-family:"Oswald";src:url(fonts/oswald-latin-400-normal.woff2) format("woff2");font-weight:400;font-display:swap}
+@font-face{font-family:"Oswald";src:url(fonts/oswald-latin-500-normal.woff2) format("woff2");font-weight:500;font-display:swap}
+@font-face{font-family:"Oswald";src:url(fonts/oswald-latin-600-normal.woff2) format("woff2");font-weight:600;font-display:swap}
+@font-face{font-family:"Oswald";src:url(fonts/oswald-latin-700-normal.woff2) format("woff2");font-weight:700;font-display:swap}
+
+:root{--gta-green:#72cc72;--gta-green-dk:#2f8f3a;--gta-blue:#5aa9e6;--gta-yellow:#f0c419;--gta-red:#e0412f;--gta-panel:rgba(0,0,0,.72);
+  font-family:"Oswald","Arial Narrow",Arial,sans-serif;color:#fff}
+button,select,input{font-family:"Oswald","Arial Narrow",Arial,sans-serif}
+
+/* ---------- the logo (loading screen, showroom, menu) ---------- */
+.load-title b,.load-title i,.game-name>span,.game-name b,.city-name{background:none!important;-webkit-background-clip:border-box!important;background-clip:border-box!important;
+  color:#fff!important;-webkit-text-fill-color:#fff;animation:none!important}
+.load-title{filter:drop-shadow(0 6px 14px rgba(0,0,0,.55));margin:10px 0 18px;transform:rotate(-2deg)}
+.load-title b,.game-name b{font-family:"Bowlby One",Impact,sans-serif;font-weight:400;font-style:normal;letter-spacing:-.01em;
+  -webkit-text-stroke:.1em #000;paint-order:stroke fill;text-shadow:.03em .07em 0 #000}
+.load-title b{font-size:clamp(56px,11vw,96px)}
+.load-title b.num{font-size:clamp(46px,9vw,80px);margin-left:.14em}
+.load-title i,.game-name>span{font-family:"Oswald",sans-serif;font-style:normal;font-weight:700;text-transform:uppercase;letter-spacing:.02em;
+  -webkit-text-stroke:.14em #000;paint-order:stroke fill}
+.load-title i{font-size:clamp(14px,2.6vw,22px);margin-left:2px}
+.game-name{filter:drop-shadow(0 3px 6px rgba(0,0,0,.5))}
+.game-name>span{display:inline-block!important;font-size:2.6em!important}
+.game-name>span b{font-size:5.8em}
+
+/* "Aushiger City": a black tag with money-green capitals, like a GTA district name */
+.city-name{display:inline-flex!important;gap:0;font-family:"Oswald",sans-serif!important;font-weight:600!important;letter-spacing:.32em!important;
+  color:var(--gta-green)!important;-webkit-text-fill-color:var(--gta-green);background:#000!important;padding:.45em .5em .45em .8em;filter:none!important;
+  text-shadow:none;transform:rotate(-2deg);box-shadow:0 4px 12px rgba(0,0,0,.4)}
+.city-name:before,.city-name:after{display:none!important}
+.load-city{margin:-4px 0 26px}.load-city .city-name{font-size:clamp(12px,2.4vw,17px)}
+
+/* ---------- loading screen ---------- */
+#load{background:radial-gradient(ellipse at 70% 15%,rgba(255,170,90,.35),transparent 55%),radial-gradient(ellipse at 20% 90%,rgba(40,120,60,.35),transparent 60%),linear-gradient(180deg,#14181c,#050607)}
+.loading-card p{font-family:"Oswald",sans-serif;text-transform:uppercase;letter-spacing:.14em;font-size:13px;color:#e8e8e8}
+.loading-track{height:4px;background:rgba(255,255,255,.15);border-radius:0}
+.loading-track i{background:var(--gta-green)}
+
+/* ---------- panels and buttons ---------- */
+.panel{background:var(--gta-panel)!important;border:0!important;border-radius:2px!important;box-shadow:0 6px 24px rgba(0,0,0,.35)!important;backdrop-filter:none!important}
+header.panel{border-top:4px solid var(--gta-green)!important}
+.eyebrow{font-family:"Oswald",sans-serif;font-weight:500;letter-spacing:.16em;color:var(--gta-blue)}
+.eyebrow #mode-label{color:#bbb}
+.live-dot{background:var(--gta-green)!important}
+.subtitle{font-family:"Oswald",sans-serif;text-transform:uppercase;letter-spacing:.12em;color:#ddd}
+.view-heading,.selection-label,.select-row,summary{font-family:"Oswald",sans-serif;text-transform:uppercase;letter-spacing:.14em}
+button{border-radius:2px!important;border:1px solid rgba(255,255,255,.18)!important;background:rgba(0,0,0,.55)!important;color:#fff!important;
+  font-family:"Oswald",sans-serif!important;font-weight:500!important;text-transform:uppercase;letter-spacing:.07em}
+button:hover{background:rgba(255,255,255,.16)!important}
+button[aria-pressed=true],.car-card.selected{background:#fff!important;color:#000!important;border-color:#fff!important}
+.primary,#begin-drive{background:var(--gta-green-dk)!important;border-color:var(--gta-green)!important;color:#fff!important;font-weight:700!important;letter-spacing:.12em}
+.primary:hover,#begin-drive:hover{background:#38a945!important}
+.primary[aria-pressed=true]{background:#fff!important;color:#000!important}
+button:disabled{opacity:.5}
+select{border-radius:2px!important;background:#000!important;color:#fff!important}
+#menu-toggle{border-radius:2px!important;background:#000!important;color:#fff!important;border:2px solid #fff!important;font-family:"Oswald",sans-serif;text-transform:uppercase;letter-spacing:.12em}
+.menu-hidden #menu-toggle{background:#fff!important;color:#000!important}
+
+/* ---------- driving HUD ---------- */
+.speed strong{font-family:"Oswald",sans-serif;font-weight:700;font-size:38px;-webkit-text-stroke:2px #000;paint-order:stroke fill}
+.speed span{font-family:"Oswald",sans-serif;text-transform:uppercase;letter-spacing:.1em;color:#ccc}
+.route-info>span{font-family:"Oswald",sans-serif;text-transform:uppercase;letter-spacing:.08em;font-weight:600}
+.route-info small{color:#bbb}
+.track{background:rgba(255,255,255,.18);border-radius:0;height:4px}
+.track i{background:var(--gta-blue)}
+.condition span{font-family:"Oswald",sans-serif}
+.condition b{font-family:"Oswald",sans-serif;font-size:18px;color:var(--gta-green)!important}
+.condition.hurt b{color:var(--gta-yellow)!important}
+.condition.wrecked b{color:var(--gta-red)!important}
+#wrecked-msg{border-radius:2px;border:2px solid var(--gta-red);background:#000;font-family:"Oswald",sans-serif;text-transform:uppercase;letter-spacing:.1em}
+.touch-controls button{font-weight:700!important;font-size:15px}
+#look-hint{font-family:"Oswald",sans-serif;text-transform:uppercase;letter-spacing:.1em;border-radius:2px}
+
+/* ---------- showroom (choose car and driver) ---------- */
+.garage-card h2{font-family:"Bowlby One",Impact,sans-serif!important;font-weight:400!important;letter-spacing:0!important;text-transform:uppercase;
+  -webkit-text-stroke:.09em #000;paint-order:stroke fill;text-shadow:.03em .06em 0 #000}
+.showroom-tag,.garage-controls,#garage-message,#preview-label{font-family:"Oswald",sans-serif;text-transform:uppercase;letter-spacing:.14em}
+.car-card{border-radius:2px!important}
+
+/* bigger drivers: side by side, tall cards, the photo fills the card */
+.driver-picker{top:11%!important;bottom:13%!important;right:3%!important;width:min(470px,34vw)!important;display:grid!important;grid-template-columns:1fr 1fr;grid-template-rows:auto minmax(0,1fr);gap:10px!important}
+.driver-picker>span{grid-column:1/-1;align-self:start;font-family:"Oswald",sans-serif;font-weight:600;font-size:13px!important;letter-spacing:.2em!important;color:#fff!important;
+  background:#000;padding:6px 10px;margin:0!important;text-transform:uppercase;height:auto}
+.driver-picker .driver-choice{width:auto!important;height:100%!important;max-height:none!important;min-height:0;border-radius:2px!important;padding:6px 4px 10px!important;
+  background:linear-gradient(180deg,rgba(0,0,0,.15),rgba(0,0,0,.75))!important;border:2px solid rgba(255,255,255,.25)!important;color:#fff!important;opacity:.7}
+.driver-picker .driver-choice[aria-pressed=true]{opacity:1;border-color:var(--gta-green)!important;box-shadow:0 0 0 2px #000,0 0 28px rgba(114,204,114,.35)!important;background:linear-gradient(180deg,rgba(47,143,58,.18),rgba(0,0,0,.8))!important}
+.driver-choice img{flex:1 1 0;width:100%;height:0;min-height:0;object-fit:contain;object-position:center bottom}
+.driver-choice strong{font-family:"Oswald",sans-serif;font-weight:700;font-size:16px!important;text-transform:uppercase;letter-spacing:.05em;line-height:1.1;margin:8px 0 3px!important;text-align:center}
+.driver-choice small{font-family:"Oswald",sans-serif;font-size:11px!important;letter-spacing:.16em!important;color:var(--gta-green)!important}
+.driver-choice[aria-pressed=false] small{color:#bbb!important}
+@media(max-width:700px){
+  .showroom-copy{top:max(118px,15%)!important}
+  .garage-card .showroom-copy h2{font-size:22px!important}
+  .driver-picker{top:20%!important;bottom:auto!important;height:35%!important;left:4%!important;right:4%!important;width:auto!important;min-width:0!important;gap:8px!important}
+  .driver-picker>span{font-size:10px!important;padding:4px 8px}
+  .driver-choice strong{font-size:12px!important}
+  .driver-choice small{font-size:9px!important}
+  #car-preview{top:55%!important;bottom:28%!important;right:0!important}
+}
+@media(max-height:650px) and (min-width:701px){.driver-picker{top:9%!important;bottom:10%!important}}
