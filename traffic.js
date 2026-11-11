@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {loadCar} from './garage.js?v=51';
 import {crumple,ownGeometry} from './damage.js?v=1';
-import {makeCar,STYLE_KEYS,STYLES} from './carfactory.js?v=1';
+import {makeCar,STYLE_KEYS,STYLES,makeTruck,TRUCK_KEYS,TRUCKS,carExhaust} from './carfactory.js?v=2';
 
 // Random village traffic: oncoming cars in the left lane, slow cars ahead you can pass,
 // and faster cars that come up behind you and overtake when the other lane is clear.
@@ -49,16 +49,18 @@ function bake(root,paintRe){
   return {group,paint};
 }
 
-export function createTraffic(scene,sample,{onPlayerHit}={}){
+export function createTraffic(scene,sample,{onPlayerHit,exhaust}={}){
   const templates=[],cars=[],up=new THREE.Vector3(0,1,0),m4=new THREE.Matrix4();
   const tmpP=new THREE.Vector3(),tmpQ=new THREE.Vector3(),fwd=new THREE.Vector3(),right=new THREE.Vector3();
   let spawnClock=2,id=0;
   // Load in the background after the world is ready; traffic starts when the first model arrives.
-  for(const key of STYLE_KEYS){const c=makeCar(key);const t=bake(c.root,/^Paint$/);t.colors=STYLES[key].colors;t.weight=key==='jp_suv'||key==='de_exec'?1.4:1;templates.push(t);}
+  for(const key of STYLE_KEYS){const c=makeCar(key);const t=bake(c.root,/^Paint$/);t.colors=STYLES[key].colors;t.weight=key==='jp_suv'||key==='de_exec'?1.4:1;t.len=STYLES[key].L;t.exhaust=carExhaust(key);templates.push(t);}
+  for(const key of TRUCK_KEYS){const c=makeTruck(key);const t=bake(c.root,/^Paint$/);t.colors=TRUCKS[key].colors;t.weight=1.1;t.len=TRUCKS[key].L;t.truck=true;t.exhaust=c.root.userData.exhaust;templates.push(t);}
   (async()=>{for(const m of MODELS){try{
     const r=await fetch(m.url);if(!r.ok)continue;
     const car=await loadCar([new File([await r.arrayBuffer()],m.url.split('/').pop().split('?')[0])]);
-    const t=bake(car.root,m.paint);t.weight=m.weight;templates.push(t);
+    const t=bake(car.root,m.paint);t.weight=m.weight;
+    const box=new THREE.Box3().setFromObject(t.group);t.len=Math.max(3.8,box.max.z-box.min.z);t.exhaust=new THREE.Vector3(box.max.x-.4,box.min.y+.22,box.max.z+.04);templates.push(t);
   }catch(e){console.warn('Traffic model skipped',e);}}})();
 
   function make(){
@@ -66,7 +68,7 @@ export function createTraffic(scene,sample,{onPlayerHit}={}){
     for(const x of templates){pick-=x.weight||1;if(pick<=0){t=x;break;}}
     const obj=t.group.clone();
     if(t.paint){const i=t.group.children.indexOf(t.paint),mesh=obj.children[i],list=t.colors||PAINTS;mesh.material=t.paint.material.clone();mesh.material.color.set(list[Math.floor(Math.random()*list.length)]);obj.userData.paint=mesh.material;}
-    obj.name='Traffic car';scene.add(obj);return obj;
+    obj.name=t.truck?'Traffic truck':'Traffic car';obj.userData.tpl=t;scene.add(obj);return obj;
   }
   function spawn(kind,player){
     if(!templates.length)return;
@@ -76,7 +78,9 @@ export function createTraffic(scene,sample,{onPlayerHit}={}){
     else{if(player.distance<110||player.speed>17)return;d=player.distance-80-Math.random()*30;dir=1;speed=Math.max(player.speed+5,13+Math.random()*6);}
     const lat=dir*LANE;
     if(cars.some(c=>Math.abs(c.d-d)<25&&Math.sign(c.lat)===Math.sign(lat)))return;
-    cars.push({id:id++,kind,d,dir,lat,targetLat:lat,speed,cruise:speed,baseCruise:speed,damage:0,hitCool:0,obj:make(),passing:null});
+    const obj=make(),t=obj.userData.tpl;
+    if(t.truck){speed*=kind==='overtake'?.9:.8;}
+    cars.push({id:id++,kind,d,dir,lat,targetLat:lat,speed,cruise:speed,baseCruise:speed,damage:0,hitCool:0,obj,passing:null,len:t.len||CAR_LEN,truck:!!t.truck,ex:t.exhaust,puff:Math.random()*.2,lastSpeed:speed});
   }
   function place(c){
     const a=sample(c.d),b=sample(c.d+1);fwd.copy(b).sub(a).normalize();right.crossVectors(fwd,up).normalize();
@@ -90,10 +94,10 @@ export function createTraffic(scene,sample,{onPlayerHit}={}){
   function ahead(c,lat,player,cows){
     let best=null,gap=Infinity;
     const consider=(d,l,len,speedAlong,ref)=>{
-      if(Math.abs(l-lat)>1.9||(d-c.d)*c.dir<=.5)return;const g=(d-c.d)*c.dir-(CAR_LEN+len)/2;
+      if(Math.abs(l-lat)>1.9||(d-c.d)*c.dir<=.5)return;const g=(d-c.d)*c.dir-(c.len+len)/2;
       if(g>-1&&g<gap){gap=g;best={gap:g,speed:speedAlong,ref,d};}
     };
-    for(const o of cars)if(o!==c)consider(o.d,o.lat,CAR_LEN,o.speed*o.dir*c.dir,o);
+    for(const o of cars)if(o!==c)consider(o.d,o.lat,o.len,o.speed*o.dir*c.dir,o);
     consider(player.distance,player.lateral,CAR_LEN,player.speed*c.dir,'player');
     for(const w of cows)consider(w.d,w.lat,2.4,0,'cow');
     return best;
@@ -124,7 +128,7 @@ export function createTraffic(scene,sample,{onPlayerHit}={}){
         }
         if(c.passing){
           const pd=c.passing.ref==='player'?player.distance:c.passing.ref==='cow'?c.passing.d:c.passing.ref.d;
-          if((pd-c.d)*c.dir<-(CAR_LEN+7)||(!oncomingClear(c,60)&&(pd-c.d)*c.dir>2)){c.passing=null;c.targetLat=home;}
+          if((pd-c.d)*c.dir<-(c.len+7)||(!oncomingClear(c,60)&&(pd-c.d)*c.dir>2)){c.passing=null;c.targetLat=home;}
         }
         const blk=ahead(c,c.targetLat,player,cows,c.passing),blk2=c.targetLat!==c.lat?ahead(c,c.lat,player,cows):null;
         let target=c.cruise;
@@ -135,23 +139,34 @@ export function createTraffic(scene,sample,{onPlayerHit}={}){
         // collisions with the player: both cars take damage, share momentum and keep going (slower)
         c.hitCool=Math.max(0,c.hitCool-dt);
         const dd=player.distance-c.d,dl=player.lateral-c.lat;
-        if(Math.abs(dd)<CAR_LEN&&Math.abs(dl)<CAR_W){
+        const reach=(c.len+CAR_LEN)/2;
+        if(Math.abs(dd)<reach&&Math.abs(dl)<(c.truck?2.1:CAR_W)){
           const side=Math.sign(dd||1),vOther=c.speed*c.dir,closing=(vOther-player.speed)*side;
           if(closing>1.2&&c.hitCool<=0){
-            const amount=Math.min(.55,.04+closing/45);c.hitCool=.8;
+            const amount=Math.min(.6,(.04+closing/45)*(c.truck?1.4:1));c.hitCool=.8;
             const vMid=(player.speed+vOther)/2;
             player.speed=vMid-side*closing*.12;player.cruise=false;
             c.speed=Math.max(0,(vMid+side*closing*.12)*c.dir);
-            c.damage=Math.min(1,c.damage+amount);c.cruise=c.damage>=.999?0:c.baseCruise*(.25+.75*(1-c.damage));
+            c.damage=Math.min(1,c.damage+amount*(c.truck?.35:1));c.cruise=c.damage>=.999?0:c.baseCruise*(.25+.75*(1-c.damage));
             const a=sample((player.distance+c.d)/2);fwd.copy(sample((player.distance+c.d)/2+1)).sub(a).normalize();right.crossVectors(fwd,up).normalize();
             const point=a.clone().addScaledVector(right,(player.lateral+c.lat)/2);point.y+=.6;
             const intoCar=fwd.clone().multiplyScalar(-side);
             ownGeometry(c.obj);crumple(c.obj,point,intoCar,1.0,.12+amount*.45);
             onPlayerHit?.({point,amount,dir:fwd.clone().multiplyScalar(side)});
           }
-          player.distance=c.d+side*CAR_LEN;
+          player.distance=c.d+side*reach;
         }
         place(c);
+        // exhaust: a puff every so often, more and darker when the engine is pulling (trucks most of all)
+        if(exhaust&&c.ex&&Math.abs(c.d-player.distance)<160){
+          const accel=Math.max(0,(c.speed-c.lastSpeed)/Math.max(dt,1e-3));c.lastSpeed=c.speed;
+          c.puff-=dt;
+          if(c.puff<=0){
+            c.obj.updateMatrixWorld();const p=c.obj.localToWorld(tmpP.copy(c.ex));const v=tmpQ.copy(fwd).multiplyScalar(c.speed*c.dir);
+            if(c.truck){c.puff=accel>.3?.07:.13;exhaust.emit(p,v,{size:.35,spread:2.2,alpha:accel>.3?.42:.24,shade:accel>.3?.22:.42,life:2.2,rise:.9});}
+            else{c.puff=accel>.3?.09:.16;exhaust.emit(p,v,{size:.18,spread:1.1,alpha:accel>.3?.2:.12,shade:.8,life:1.4,rise:.25});}
+          }
+        }
       }
       for(let i=cars.length-1;i>=0;i--){
         const c=cars[i],rel=(c.d-player.distance);

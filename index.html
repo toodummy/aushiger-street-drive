@@ -94,7 +94,7 @@ footer,footer *,#menu-toggle,header button{-webkit-user-select:none;user-select:
   <div class="title-row"><h1 class="hud-game-name"><span class="game-name" aria-label="Go To Aushiger VII"><span aria-hidden="true"><b>G</b>o <b>T</b>o <b>A</b>ushiger <b>VII</b></span></span></h1></div>
   <p class="subtitle">The northern descent</p>
   <div class="view-heading">CAMERA VIEW</div><div class="camera-views" role="group" aria-label="Driving camera view"><button data-view="interior" aria-pressed="true">Interior</button><button data-view="hood" aria-pressed="false">Hood</button><button data-view="outside" aria-pressed="false">Outside</button></div><div class="actions"><button id="cruise" class="primary" aria-pressed="false">Start cruise</button><button id="mode" aria-pressed="false">Free camera</button></div>
-  <button id="sound-toggle" type="button" class="garage-link sound-link">🔊 Sound on</button><button id="open-garage" class="garage-link">Choose car / Driver’s seat</button><div class="secondary"><button id="reset">Restart</button><button id="center">Centre view</button></div>
+  <button id="sound-toggle" type="button" class="garage-link sound-link">🔊 Sound on</button><button id="music-toggle" type="button" class="garage-link sound-link">🎵 Music on</button><button id="open-garage" class="garage-link">Choose car / Driver’s seat</button><div class="secondary"><button id="reset">Restart</button><button id="center">Centre view</button></div>
   <label class="select-row">Jump to <select id="location" aria-label="Route location"><option value="0">North entrance</option><option value="340">Hillside descent</option><option value="620">Village entrance</option><option value="745">Village compounds</option><option value="945">Bus stop & crossing</option><option value="1110">Village street</option></select></label>
   <details id="about"><summary>Controls & scene details</summary><p><b>W / S</b> accelerate and brake · <b>A / D</b> steer<br><b>Space</b> cruise · <b>R</b> restart · <b>F</b> centre view<br><b>V</b> free camera · <b>Q / E</b> down / up · <b>Shift</b> faster<br><b>Mouse</b> look · <b>Wheel</b> zoom · <b>Esc</b> release mouse</p><label class="select-row">Graphics <select id="quality"><option value="high">High · ambient occlusion</option><option value="balanced" selected>Balanced · faster</option></select></label><p class="accuracy">Reconstructed from your street references. Terrain, distances and unseen buildings are inferred; this is not an exact digital survey.</p><p id="asset-status"></p><p><a href="https://polyhaven.com" target="_blank" rel="noopener">Powered by Poly Haven</a> · CC0 photographic materials</p><output id="diagnostics" hidden></output></details>
 </header>
@@ -124,7 +124,7 @@ footer,footer *,#menu-toggle,header button{-webkit-user-select:none;user-select:
  </div></section>
 <div id="load"><div class="loading-card"><h2 class="load-title" aria-label="Go To Aushiger VII"><span aria-hidden="true"><b>G</b><i>o</i> <b>T</b><i>o</i> <b>A</b><i>ushiger</i> <b class="num">VII</b></span></h2><div class="load-city"><span class="city-name">Aushiger City</span></div><p id="progress">Preparing your drive</p><div class="loading-track"><i id="loadbar"></i></div><button id="retry" hidden>Reload</button></div></div>
 <script type="module">
-import('./app-v3.js?v=59').catch(error=>{
+import('./app-v3.js?v=60').catch(error=>{
   console.error(error);
   const progress=document.querySelector('#progress');
   if(progress)progress.textContent='Unable to start: '+error.message;

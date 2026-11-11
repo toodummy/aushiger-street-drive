@@ -2,8 +2,8 @@ import * as THREE from 'three';
 import {makeCar} from './carfactory.js?v=1';
 
 // Police: after a crash a patrol car (white, blue stripe, "ПОЛИЦИЯ", flashing light bar) comes
-// from behind with the siren on, pulls up behind you and stays; if you drive off it follows you
-// for a while, then it overtakes and leaves. Route coordinates: d along the road, lat across.
+// from behind with the siren on, overtakes you from the side, cuts in front and brakes you to a
+// stop, swerving to block you if you try to get past. After a few seconds stopped it drives off. Route coordinates: d along the road, lat across.
 function letteringTexture(text,w=512,h=96,size=58){
   const c=document.createElement('canvas');c.width=w;c.height=h;const g=c.getContext('2d');
   g.clearRect(0,0,w,h);g.fillStyle='#173a8c';g.font=`bold ${size}px Arial`;g.textAlign='center';g.textBaseline='middle';g.fillText(text,w/2,h/2+2);
@@ -32,53 +32,74 @@ function buildPoliceCar(){
   return {root,red,blu,glow};
 }
 
-export function createPolice(scene,sample){
-  let car=null,state='idle',d=0,lat=-1.7,speed=0,timer=0,siren=false,flash=0;
+export function createPolice(scene,sample,{onBump}={}){
+  let car=null,state='idle',d=0,lat=-1.7,speed=0,timer=0,siren=false,flash=0,hold=0,bumpCool=0,brakeTo=99;
   const up=new THREE.Vector3(0,1,0),a=new THREE.Vector3(),b=new THREE.Vector3(),fwd=new THREE.Vector3(),right=new THREE.Vector3(),m4=new THREE.Matrix4();
+  const LEN=4.7,WID=1.85;
   function ensure(){if(!car){car=buildPoliceCar();scene.add(car.root);car.root.visible=false;}}
   function place(){
     a.copy(sample(d));b.copy(sample(d+1));fwd.copy(b).sub(a).normalize();right.crossVectors(fwd,up).normalize();
     const p=a.clone().addScaledVector(right,lat);m4.lookAt(p,p.clone().add(fwd),up);car.root.position.copy(p);car.root.quaternion.setFromRotationMatrix(m4);
   }
+  // the lane the patrol car uses to come past: well clear of the driver, on the side with more room
+  const passLat=p=>p.lateral>0?Math.max(-2.8,p.lateral-3.3):Math.min(2.8,p.lateral+3.3);
+  const steer=(to,rate,dt)=>{lat+=THREE.MathUtils.clamp(to-lat,-rate*dt,rate*dt);lat=THREE.MathUtils.clamp(lat,-2.8,2.8);};
   return {
     get active(){return state!=='idle';},
+    get state(){return state;},
     // call when the player crashes into something
     report(player){
       ensure();
       if(state==='idle'||state==='leave'){
-        d=Math.max(1,player.distance-170);lat=-1.7;speed=26;state='approach';car.root.visible=true;
+        d=Math.max(1,player.distance-150);lat=passLat(player);speed=Math.max(24,player.speed+12);state='approach';hold=0;car.root.visible=true;
       }
-      timer=28;siren=true;
+      timer=Math.max(timer,30);siren=true;
     },
     update(dt,player){
       if(state==='idle'||!car)return;
-      dt=Math.min(dt,.05);const gapNow=player.distance-d;
+      dt=Math.min(dt,.05);bumpCool=Math.max(0,bumpCool-dt);
+      const gap=d-player.distance;                       // > 0: police is ahead of the driver
       if(state==='approach'){
-        // come up fast in the other lane, then tuck in behind the driver
-        const close=gapNow<40;
-        lat+=THREE.MathUtils.clamp((close?player.lateral:-1.7)-lat,-1.6*dt,1.6*dt);
-        const want=close?Math.max(0,player.speed+(gapNow-9)*.8):Math.max(26,player.speed+10);
-        speed+=THREE.MathUtils.clamp(want-speed,-9*dt,5*dt);
-        if(close&&Math.abs(gapNow-9)<3)state='escort';
-      }else if(state==='escort'){
+        // race up alongside in the other lane and overtake
+        steer(gap>-12?passLat(player):lat,2.4,dt);
+        const want=Math.max(22,player.speed+(gap<-30?14:7));
+        speed+=THREE.MathUtils.clamp(want-speed,-8*dt,7*dt);
+        if(gap>LEN+2.5){state='block';brakeTo=Math.max(player.speed,speed*.8);}
+      }else if(state==='block'){
         timer-=dt;
-        lat+=THREE.MathUtils.clamp(player.lateral-lat,-1.2*dt,1.2*dt);
-        const want=Math.max(0,player.speed+(gapNow-9)*.9);speed+=THREE.MathUtils.clamp(want-speed,-9*dt,5*dt);
-        if(timer<=0){state='leave';siren=false;}
+        if(gap<0){state='approach';}
+        else{
+          // cut in right in front of the driver and mirror every swerve, so there's no way past
+          const close=gap<LEN+9;
+          steer(player.lateral,close?3.6:2.4,dt);
+          // brake the driver to a stop: stay just ahead, a little slower than them
+          // once in front, ease down to a stop whatever the driver does
+          const G=LEN+2.2;if(gap<G+5)brakeTo=Math.max(0,brakeTo-2.6*dt);
+          const want=Math.max(0,Math.min(brakeTo,player.speed+(G-gap)*.8));
+          speed+=THREE.MathUtils.clamp(want-speed,-5.5*dt,4*dt);
+          if(Math.abs(player.speed)<.6&&speed<.6)hold+=dt;else hold=Math.max(0,hold-dt*.5);
+        }
+        if(hold>6||timer<=0){state='leave';siren=false;}
       }else if(state==='leave'){
-        lat+=THREE.MathUtils.clamp(-1.7-lat,-1.4*dt,1.4*dt);
-        speed+=THREE.MathUtils.clamp(Math.max(20,player.speed+8)-speed,-6*dt,4*dt);
-        if(d>player.distance+320||d>1495){state='idle';car.root.visible=false;car.glow.intensity=0;}
+        steer(gap>0?1.7:-1.7,1.4,dt);
+        speed+=THREE.MathUtils.clamp(Math.max(18,player.speed+6)-speed,-6*dt,3.5*dt);
+        if(Math.abs(gap)>320||d>1494){state='idle';car.root.visible=false;car.glow.intensity=0;}
       }
       d=Math.min(1495,d+speed*dt);
-      if(Math.abs(player.distance-d)<4.5&&Math.abs(player.lateral-lat)<1.8){d=player.distance-4.5*Math.sign(player.distance-d||1);speed=Math.min(speed,Math.abs(player.speed));}
+      // solid car: the driver can't drive through the patrol car
+      const g2=d-player.distance;
+      if(Math.abs(g2)<LEN&&Math.abs(player.lateral-lat)<WID){
+        if(g2>0){const impact=player.speed-speed;player.distance=d-LEN;if(player.speed>speed){player.speed=Math.max(0,speed-.5);player.cruise=false;}
+          if(impact>2.5&&bumpCool<=0){bumpCool=1;onBump?.(impact);}}
+        else{d=player.distance-LEN;speed=Math.min(speed,Math.max(0,player.speed));}
+      }
       place();
       // flashing: red and blue alternate in quick double bursts
       flash+=dt;const phase=(flash*2.2)%1,burst=(x)=>((x%.5)<.08||((x%.5)>.14&&(x%.5)<.22))?1:0;
-      const on=state!=='leave'||timer>-1;
+      const on=state!=='leave';
       const r=on?burst(phase):0,bl=on?burst((phase+.5)%1):0;
       car.red.emissiveIntensity=r*4;car.blu.emissiveIntensity=bl*4;
-      car.glow.color.set(r?'#ff2020':'#2050ff');car.glow.intensity=(r||bl)?(on?6:0):0;
+      car.glow.color.set(r?'#ff2020':'#2050ff');car.glow.intensity=(r||bl)?6:0;
     },
     sound(){return state!=='idle'&&siren?{d,lat}:null;},
     obstacle(){return state!=='idle'?{d,lat}:null;}

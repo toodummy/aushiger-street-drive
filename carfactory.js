@@ -151,3 +151,82 @@ export function makeCar(styleKey,color){
   return {root:car,paint};
 }
 export const STYLE_KEYS=Object.keys(STYLES);
+
+// ---- Trucks: cab-over lorries (dump truck and box van), 7.4 m long, three axles, exhaust stack.
+export const TRUCKS={
+  truck_dump:{label:'Dump truck',L:7.4,W:2.45,colors:['#e06a1a','#1d4f8f','#c22a22','#2f6b3a','#d8b21c'],bed:'dump'},
+  truck_box: {label:'Box truck',L:7.4,W:2.45,colors:['#e8e8e2','#1d4f8f','#c22a22','#3a3d40'],bed:'box'}
+};
+export const TRUCK_KEYS=Object.keys(TRUCKS);
+export function makeTruck(key,color){
+  const T=TRUCKS[key],M=mats(),car=new THREE.Group();car.name='Traffic '+T.label;
+  const paint=new THREE.MeshPhysicalMaterial({name:'Paint',color:color||T.colors[Math.floor(Math.random()*T.colors.length)],metalness:.25,roughness:.45,clearcoat:.6,clearcoatRoughness:.3});
+  const add=(geo,mat,x=0,y=0,z=0,parent=car)=>{const m=new THREE.Mesh(geo,mat);m.position.set(x,y,z);m.castShadow=true;m.receiveShadow=true;parent.add(m);return m;};
+  const W=T.W,hl=T.L/2,R=.5,front=-hl,cabBack=front+1.95,frame=new THREE.MeshStandardMaterial({name:'Frame',color:'#1c1d1f',roughness:.7});
+  const grey=new THREE.MeshStandardMaterial({name:'Bed',color:'#6a6d70',roughness:.7,metalness:.2});
+  const boxMat=new THREE.MeshStandardMaterial({name:'Box',color:'#d9dadb',roughness:.55});
+  // chassis rails and bumper
+  for(const side of [-1,1])add(new THREE.BoxGeometry(.14,.26,T.L-.5),frame,side*.45,.82,.15);
+  add(new THREE.BoxGeometry(W,.32,.22),frame,0,.62,front+.08);
+  // cab: side profile, slightly raked front, rounded edges
+  const sh=new THREE.Shape();sh.moveTo(front,.95);sh.lineTo(front-.02,1.75);sh.lineTo(front+.12,2.95);sh.lineTo(cabBack,3.0);sh.lineTo(cabBack,.95);sh.closePath();
+  const cab=add(finish(sh,W,.09),paint);cab.name='Cab';
+  // windscreen, side windows, grille, lights
+  const ws=add(new THREE.PlaneGeometry(W-.3,.82).rotateY(Math.PI),M.glass,0,2.38,front-.075);ws.rotation.x=.11;
+  for(const side of [-1,1]){
+    add(new THREE.PlaneGeometry(.95,.7).rotateY(side*Math.PI/2),M.glass,side*(W/2+.005),2.38,front+.75);
+    add(new THREE.BoxGeometry(.03,.22,.07),M.black,side*(W/2+.01),1.55,front+1.0);                 // door handle recess
+    add(new THREE.BoxGeometry(.005,1.85,.006),M.seam,side*(W/2+.006),1.95,front+1.55);
+    const arm=add(new THREE.BoxGeometry(.32,.04,.04),M.black,side*(W/2+.16),2.55,front+.25);
+    add(new THREE.BoxGeometry(.06,.36,.18),M.black,side*(W/2+.32),2.45,front+.25);                 // mirror
+    add(new THREE.BoxGeometry(.38,.2,.06),M.head,side*(W/2-.35),.74,front-.04);                     // headlight
+    add(new THREE.BoxGeometry(.14,.1,.06),M.amber,side*(W/2-.08),.74,front-.04);
+    add(new THREE.BoxGeometry(.5,.05,.25),frame,side*(W/2-.25),.62,front+.55);                      // step
+    add(new THREE.BoxGeometry(.5,.05,.25),frame,side*(W/2-.25),.98,front+.55).position.y=.38;
+    // fender over the front wheel
+    const f=add(new THREE.CylinderGeometry(R+.1,R+.1,.42,20,1,true,-Math.PI/2,Math.PI),frame,side*(W/2-.22),R,front+1.05);f.rotation.z=Math.PI/2;f.rotation.y=Math.PI/2;
+  }
+  add(new THREE.BoxGeometry(W-1.1,.42,.05),M.black,0,1.42,front-.085);
+  for(let i=0;i<5;i++)add(new THREE.BoxGeometry(W-1.12,.025,.06),M.chrome,0,1.25+i*.085,front-.095);
+  add(new THREE.BoxGeometry(W-.2,.1,.4),M.black,0,3.04,front+.95);                                    // roof cap
+  for(const x of [-.4,-.13,.13,.4])add(new THREE.BoxGeometry(.12,.06,.06),M.amber,x,3.0,front+.08);    // roof marker lights
+  // fuel tank and exhaust stack behind the cab
+  const tank=add(new THREE.CylinderGeometry(.3,.3,1.0,18).rotateX(Math.PI/2),M.chrome,-(W/2-.4),.82,cabBack+.7);
+  add(new THREE.CylinderGeometry(.07,.07,2.5,12),M.black,W/2-.25,1.95,cabBack+.12);
+  add(new THREE.CylinderGeometry(.075,.075,.25,12),M.chrome,W/2-.25,3.25,cabBack+.12);
+  car.userData.exhaust=new THREE.Vector3(W/2-.25,3.4,cabBack+.12);car.userData.diesel=true;
+  // load body
+  if(T.bed==='dump'){
+    const z0=cabBack+.35,z1=hl-.05,len=z1-z0,zc=(z0+z1)/2,y0=1.15,h=1.05;
+    add(new THREE.BoxGeometry(W-.05,.1,len),grey,0,y0,zc);
+    for(const side of [-1,1]){add(new THREE.BoxGeometry(.07,h,len),grey,side*(W/2-.06),y0+h/2,zc);for(let i=1;i<5;i++)add(new THREE.BoxGeometry(.09,h,.06),frame,side*(W/2-.03),y0+h/2,z0+i*len/5);}
+    add(new THREE.BoxGeometry(W-.05,h+.25,.08),grey,0,y0+(h+.25)/2,z0);add(new THREE.BoxGeometry(W-.05,h,.08),grey,0,y0+h/2,z1);
+    // a load of gravel
+    const g=add(new THREE.SphereGeometry(1,16,8,0,Math.PI*2,0,Math.PI/2),new THREE.MeshStandardMaterial({color:'#8a7f70',roughness:1}),0,y0+.4,zc);g.scale.set(W/2-.15,.7,len/2-.1);
+  }else{
+    const z0=cabBack+.15,z1=hl-.02,len=z1-z0,zc=(z0+z1)/2;
+    add(new THREE.BoxGeometry(W+.05,2.35,len),boxMat,0,1.1+2.35/2,zc);
+    for(const side of [-1,1])add(new THREE.BoxGeometry(.01,.12,len-.1),paint,side*(W/2+.03),1.45,zc);
+    add(new THREE.BoxGeometry(.03,2.2,.006),M.seam,0,1.1+1.15,z1+.005);
+    for(const x of [-.35,.35])add(new THREE.BoxGeometry(.04,2.1,.05),M.chrome,x,2.25,z1+.02);
+  }
+  // rear: lights, under-run bar, mud flaps, plate
+  for(const side of [-1,1]){add(new THREE.BoxGeometry(.3,.12,.05),M.tail,side*(W/2-.3),.78,hl+.03);add(new THREE.BoxGeometry(.5,.55,.02),M.rubber,side*(W/2-.35),.55,hl-.2);}
+  add(new THREE.BoxGeometry(W-.3,.1,.1),frame,0,.5,hl);
+  add(new THREE.PlaneGeometry(.52,.115),new THREE.MeshStandardMaterial({map:plateTexture(),roughness:.4}),0,.75,hl+.06);
+  add(new THREE.PlaneGeometry(.52,.115).rotateY(Math.PI),new THREE.MeshStandardMaterial({map:plateTexture(),roughness:.4}),0,.62,front-.04);
+  // wheels: one steering axle under the cab, two driven axles at the back (wide twin tyres)
+  const hub=new THREE.MeshStandardMaterial({name:'Hub',color:'#8a1c1c',roughness:.5,metalness:.3});
+  for(const [z,wide,name] of [[front+1.05,.36,'F'],[hl-2.35,.55,'R1'],[hl-1.05,.55,'R2']]){
+    for(const side of [-1,1]){
+      const w=new THREE.Group();w.name='Wheel_'+name+(side<0?'L':'R');w.position.set(side*(W/2-.2-(wide>.4?.08:0)),R,z);car.add(w);
+      add(new THREE.CylinderGeometry(R,R,wide,28).rotateZ(Math.PI/2),M.rubber,0,0,0,w);
+      add(new THREE.CircleGeometry(R*.62,24).rotateY(side*Math.PI/2),hub,side*(wide/2+.005),0,0,w);
+      add(new THREE.CircleGeometry(R*.25,16).rotateY(side*Math.PI/2),M.chrome,side*(wide/2+.01),0,0,w);
+    }
+  }
+  const under=add(new THREE.BoxGeometry(W-.4,.05,T.L-.6),M.black,0,.4,0);under.castShadow=false;
+  return {root:car,paint};
+}
+// exhaust pipe of a generated car, in its local space (rear right, low)
+export function carExhaust(key){const S=STYLES[key];return new THREE.Vector3(S.W/2-.38,S.clear+.08,S.L/2+.06);}

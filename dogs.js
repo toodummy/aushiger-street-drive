@@ -84,7 +84,7 @@ export function createDogs(scene,sample,{onHit}={}){
       let g=dogs.find(x=>!x.active);
       if(!g){if(dogs.length>=MAX_DOGS)return;const m=buildDog(template,built++);scene.add(m.obj);g={...m};dogs.push(g);}
       Object.assign(g,{active:true,dead:false,d:center+rnd(-6,6),lat:(Math.random()<.5?-1:1)*rnd(3.2,5.2),heading:Math.random()*Math.PI*2,speed:0,
-        state:'trot',timer:rnd(2,5),walk:Math.random()*6,fall:0,vd:0,vl:0,spin:0,side:1,deadAge:0,chase:0,target:null});
+        state:'trot',timer:rnd(2,5),walk:Math.random()*6,fall:0,vd:0,vl:0,spin:0,side:1,deadAge:0,chase:0,target:null,angry:Math.random()<.8,cool:0,lunge:0});
       g.model.position.set(0,0,0);g.model.rotation.set(0,0,0);g.obj.visible=true;
     }
   }
@@ -100,7 +100,7 @@ export function createDogs(scene,sample,{onHit}={}){
     update(dt,player,cars=[]){
       dt=Math.min(dt,.05);if(!template)return;
       clock-=dt;
-      if(clock<=0){if(dogs.filter(g=>g.active&&!g.dead&&g.d>player.distance-10).length<3)spawn(player);clock=rnd(4,9);}
+      if(clock<=0){if(dogs.filter(g=>g.active&&!g.dead&&g.d>player.distance-10).length<4)spawn(player);clock=rnd(3,7);}
       const t=performance.now()/1000;
       for(const g of dogs){
         if(!g.active)continue;
@@ -123,13 +123,19 @@ export function createDogs(scene,sample,{onHit}={}){
           else if(r<.52){g.state='lie';g.timer=rnd(6,14);}
           else{g.state='trot';g.timer=rnd(3,7);g.heading+=rnd(-1,1);}
         }
-        // sometimes a dog chases a passing car for a few seconds, barking
-        const dd=g.d-player.distance,dl=g.lat-player.lateral;
-        if(g.state!=='chase'&&g.state!=='lie'&&Math.abs(dd)<12&&Math.abs(player.speed)>4&&Math.random()<dt*.25){g.state='chase';g.timer=rnd(3,6);}
+        // village dogs hate cars: most of them run at yours as it comes past, barking, and chase it
+        // alongside the driver's door until they're outrun or lose interest
+        const dd=g.d-player.distance,dl=g.lat-player.lateral;g.cool=Math.max(0,g.cool-dt);
+        if(g.state!=='chase'&&g.angry&&g.cool<=0&&dd<45&&dd>-6&&Math.abs(player.speed)>2.5&&Math.random()<dt*(g.state==='lie'?.5:1.6)){g.state='chase';g.timer=rnd(6,11);}
+        if(g.state==='chase'&&(dd<-28||g.timer<=.05)){g.state='trot';g.timer=rnd(2,4);g.cool=rnd(8,15);g.heading+=Math.PI*.6;}
         let want=0;
         if(g.state==='trot')want=1.4;else if(g.state==='dart')want=5.5;else if(g.state==='sniff')want=.25;
         if(g.state==='chase'){
-          want=Math.min(9,Math.abs(player.speed)+1.5);const target=Math.atan2(player.lateral+Math.sign(dl||1)*1.6-g.lat,(player.distance+1.5)-g.d);
+          // run at the driver's door, now and then lunging in a little closer
+          g.lunge=Math.max(0,g.lunge-dt);if(g.lunge<=0&&Math.random()<dt*.6)g.lunge=.6;
+          const sideOff=(g.lunge>0?1.3:1.75)*Math.sign(dl||1),aimD=player.distance-.2+Math.abs(player.speed)*.25;
+          want=Math.min(12.5,Math.max(4,Math.abs(player.speed)+(aimD-g.d)*.8+.5));
+          const target=Math.atan2(player.lateral+sideOff-g.lat,aimD-g.d);
           g.heading+=angleTo(g.heading,target)*Math.min(1,dt*4);
         }
         // keep near the road
