@@ -40,9 +40,46 @@ export async function loadCar(files){
   wrapper.position.set(-center.x,-bounds.min.y,-center.z);wrapper.updateMatrixWorld(true);
   const pivot=new THREE.Group();pivot.add(wrapper);bounds.setFromObject(pivot);size=bounds.getSize(new THREE.Vector3());
   pivot.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});
+  keepInteriorOutOfWheels(pivot);
   const eyeMarker=pivot.getObjectByName('Lada_DriverEye'),driverEye=eyeMarker?eyeMarker.getWorldPosition(new THREE.Vector3()):null;
   return {root:pivot,size,driverEye,name:main.name.replace(/\.(glb|gltf)$/i,'')};
  }finally{urls.forEach(u=>URL.revokeObjectURL(u));}
+}
+// Interior pieces (floor, sills, door cards) must not reach into the wheel wells, where they show
+// through the arches or cut across the wheels. Pull any such vertex back inboard of the tyre.
+function keepInteriorOutOfWheels(pivot){
+  pivot.updateMatrixWorld(true);
+  const tyres=[];pivot.traverse(o=>{if(o.isMesh&&/Wheel_.*Tyre|Tyre|Tire/i.test(o.name))tyres.push(new THREE.Box3().setFromObject(o).expandByVector(new THREE.Vector3(.0,.12,.06)));});
+  if(!tyres.length)return;
+  // black wheel-well liners: an arched shell over each tyre and a closed inner side, like the real car
+  const linerMat=new THREE.MeshStandardMaterial({name:'Wheel_Well_Liner',color:'#0d0d0d',roughness:.95,side:THREE.DoubleSide});
+  const inv0=new THREE.Matrix4().copy(pivot.matrixWorld).invert();
+  for(const t of tyres){
+    const c=t.getCenter(new THREE.Vector3()),r=(t.max.y-t.min.y)/2+.13,len=(t.max.x-t.min.x)+.03,side=Math.sign(c.x)||1;
+    const shell=new THREE.Mesh(new THREE.CylinderGeometry(r,r,len,28,1,true,.12,Math.PI-.24).rotateZ(Math.PI/2),linerMat);
+    const cap=new THREE.Mesh(new THREE.CircleGeometry(r,28,.12,Math.PI-.24).rotateY(Math.PI/2),linerMat);
+    cap.position.x=-side*len/2;
+    const liner=new THREE.Group();liner.name='Wheel well liner';liner.add(shell,cap);
+    liner.position.copy(c).applyMatrix4(inv0);liner.position.y+=0;pivot.add(liner);liner.updateMatrixWorld(true);
+  }
+  // trim interior pieces lengthways so they stop at the arch edge nearest the cabin
+  const arches=tyres.map(t=>{const c=t.getCenter(new THREE.Vector3()),r=(t.max.y-t.min.y)/2+.13;return {c,r,edge:c.z>0?c.z-r:c.z+r};});
+  const v=new THREE.Vector3(),inv=new THREE.Matrix4();
+  pivot.traverse(o=>{
+    if(!o.isMesh||!/^Int_/i.test(o.name))return;
+    const b=new THREE.Box3().setFromObject(o);
+    if(!arches.some(a=>b.max.z>a.c.z-a.r&&b.min.z<a.c.z+a.r&&b.min.y<a.c.y+a.r&&Math.max(Math.abs(b.min.x),Math.abs(b.max.x))>.3))return;
+    const g=o.geometry=o.geometry.clone(),p=g.attributes.position;inv.copy(o.matrixWorld).invert();let moved=false;
+    for(let i=0;i<p.count;i++){
+      v.fromBufferAttribute(p,i).applyMatrix4(o.matrixWorld);
+      for(const a of arches){
+        if(Math.abs(v.x)<.3||v.y>a.c.y+a.r||Math.sign(v.x)!==Math.sign(a.c.x))continue;
+        if(v.z>a.c.z-a.r&&v.z<a.c.z+a.r){v.z=a.edge;moved=true;}
+      }
+      v.applyMatrix4(inv);p.setXYZ(i,v.x,v.y,v.z);
+    }
+    if(moved){p.needsUpdate=true;g.computeVertexNormals();g.computeBoundingSphere();g.computeBoundingBox();}
+  });
 }
 const UP=new THREE.Vector3(0,1,0);
 // Rough five-speed rev curve (x1000 rpm) for the Polo's modelled rev counter.

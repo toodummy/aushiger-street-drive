@@ -1,7 +1,8 @@
-import {addLandscape} from './landscape.js?v=7';
-import {createGarage} from './garage.js?v=50';
-import {createTraffic} from './traffic.js?v=6';
+import {addLandscape} from './landscape.js?v=9';
+import {createGarage} from './garage.js?v=51';
+import {createTraffic} from './traffic.js?v=7';
 import {createCows} from './cows.js?v=3';
+import {createDogs} from './dogs.js?v=1';
 import {crumple,repair,createSmoke} from './damage.js?v=1';
 import * as THREE from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
@@ -31,7 +32,7 @@ const viewQ=new THREE.Quaternion(),baseQ=new THREE.Quaternion(),freeBase=new THR
 const lookMatrix=new THREE.Matrix4(),lookEuler=new THREE.Euler(0,0,0,'YXZ');
 const freePosition=new THREE.Vector3();
 let route,ready=false,lighting,details,world,packs,drag=null,quality='balanced',photoSky=false;
-let composer,ssao,renderPass,outputPass,landscape,garage,traffic,cows,smoke;const enginePos=new THREE.Vector3(),carVel=new THREE.Vector3();
+let composer,ssao,renderPass,outputPass,landscape,garage,traffic,cows,dogs,smoke;const enginePos=new THREE.Vector3(),carVel=new THREE.Vector3();
 let frames=0,frameTime=0,fps=0,hudElapsed=0,driveView='interior';
 
 function sample(d){
@@ -156,6 +157,8 @@ try{
   let offset=0;for(const chunk of chunks){bytes.set(chunk,offset);offset+=chunk.length;}
   const gltf=await new GLTFLoader().parseAsync(bytes.buffer,'');
   world=gltf.scene;scene.add(world);
+  // the street model's flat 'atmospheric' mountain strips sit in front of the detailed ranges and read as a fog band
+  world.traverse(o=>{if(/^Distant_continuous_mountain_silhouette/.test(o.name))o.visible=false;});
   progress('Applying surface textures',42);
   packs=await textureWorld(world,renderer,count=>progress('Applying surface textures',42+count/45*25));
   lighting=await lightWorld(scene,renderer);
@@ -164,7 +167,7 @@ try{
   details=enrichWorld(scene,world,sample,packs);batchTrees(world);
   landscape=addLandscape(scene,world);
   garage=createGarage(scene,()=>{keys.clear();state.cruise=false;state.speed=0;updateControls();},()=>{state.free=false;state.yaw=state.pitch=0;keys.clear();pose();updateControls();});
-  cows=createCows(scene,sample,{onHit:takeHit});traffic=createTraffic(scene,sample,{onPlayerHit:takeHit});smoke=createSmoke(scene);
+  cows=createCows(scene,sample,{onHit:takeHit});traffic=createTraffic(scene,sample,{onPlayerHit:takeHit});smoke=createSmoke(scene);dogs=createDogs(scene,sample,{onHit:takeHit});
   progress('Preparing daylight and shadows',90);
   composer=new EffectComposer(renderer);renderPass=new RenderPass(scene,camera);renderPass.enabled=true;
   ssao=new SSAOPass(scene,camera,innerWidth,innerHeight);ssao.kernelRadius=7;ssao.minDistance=.001;ssao.maxDistance=.06;
@@ -180,7 +183,7 @@ $('#retry')?.addEventListener('click',()=>location.reload());
 const clock=new THREE.Clock();
 renderer.setAnimationLoop(()=>{
   const elapsed=clock.getDelta(),dt=Math.min(elapsed,.05);if(!ready)return;
-  const wasCruise=state.cruise;if(!state.free&&!garage?.isOpen)stepDrive(state,keys,dt,1490,garage.topSpeed);if(!garage?.isOpen){cows?.update(dt,state,traffic?.obstacles()||[]);traffic?.update(dt,state,cows?.obstacles()||[]);}smoke?.update(dt,garage?.hasCar&&!state.free?enginePos:null,state.damage||0,carVel);garage?.setSpeed(state.speed);if(wasCruise!==state.cruise)updateControls();
+  const wasCruise=state.cruise;if(!state.free&&!garage?.isOpen)stepDrive(state,keys,dt,1490,garage.topSpeed);if(!garage?.isOpen){const cars=traffic?.obstacles()||[];cows?.update(dt,state,cars);dogs?.update(dt,state,cars);traffic?.update(dt,state,[...(cows?.obstacles()||[]),...(dogs?.obstacles()||[]).filter(g=>!g.dead)]);}smoke?.update(dt,garage?.hasCar&&!state.free?enginePos:null,state.damage||0,carVel);garage?.setSpeed(state.speed);if(wasCruise!==state.cruise)updateControls();
   pose(garage?.isOpen?0:dt);lighting.update(camera,forward);landscape?.update(dt);
   if(quality==='high')composer.render();else renderer.render(scene,camera);
   frames++;frameTime+=elapsed;hudElapsed+=elapsed;
