@@ -5,7 +5,8 @@
 @font-face{font-family:"Oswald";src:url(fonts/oswald-latin-400-normal.woff2) format("woff2");font-weight:400;font-display:swap}
 @font-face{font-family:"Oswald";src:url(fonts/oswald-latin-500-normal.woff2) format("woff2");font-weight:500;font-display:swap}
 @font-face{font-family:"Oswald";src:url(fonts/oswald-latin-600-normal.woff2) format("woff2");font-weight:600;font-display:swap}
-@font-face{font-family:"Oswald";src:url(fonts/oswald-latin-700-normal.woff2) format("woff2");font-weight:700;font-display:swap}
+@font-face{font-family:"Oswald";src:url(fonts/oswald-latin-700-normal.woff2) format("woff2");font-weight:700;font-display:swap;unicode-range:U+0000-00FF,U+2000-206F}
+@font-face{font-family:"Oswald";src:url(fonts/oswald-cyrillic-700-normal.woff2) format("woff2");font-weight:700;font-display:swap;unicode-range:U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116}
 
 :root{--gta-green:#72cc72;--gta-green-dk:#2f8f3a;--gta-blue:#5aa9e6;--gta-yellow:#f0c419;--gta-red:#e0412f;--gta-panel:rgba(0,0,0,.72);
   font-family:"Oswald","Arial Narrow",Arial,sans-serif;color:#fff}

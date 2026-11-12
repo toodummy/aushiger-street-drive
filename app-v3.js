@@ -1,12 +1,12 @@
 import {addLandscape} from './landscape.js?v=9';
-import {createGarage} from './garage.js?v=52';
-import {createTraffic} from './traffic.js?v=10';
-import {createCows} from './cows.js?v=5';
+import {createGarage} from './garage.js?v=53';
+import {createTraffic} from './traffic.js?v=11';
+import {createCows} from './cows.js?v=6';
 import {createDogs} from './dogs.js?v=4';
 import {createBirds} from './birds.js?v=1';
 import {createAudio} from './audio.js?v=4';
 import {createExhaust} from './exhaust.js?v=1';
-import {createPolice} from './police.js?v=3';
+import {createPolice} from './police.js?v=4';
 import {crumple,repair,createSmoke} from './damage.js?v=1';
 import * as THREE from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';

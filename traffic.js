@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
-import {loadCar} from './garage.js?v=52';
+import {loadCar} from './garage.js?v=53';
 import {crumple,ownGeometry} from './damage.js?v=1';
 import {makeCar,STYLE_KEYS,STYLES,makeTruck,TRUCK_KEYS,TRUCKS,carExhaust} from './carfactory.js?v=2';
 
@@ -161,6 +161,12 @@ export function createTraffic(scene,sample,{onPlayerHit,exhaust}={}){
           }
           player.distance=c.d+side*reach;
         }
+        // driving into a buffalo wrecks the car outright; the buffalo doesn't budge
+        for(const w of cows){if(!w.buffalo||w.dead)continue;const sd=c.d-w.d;
+          if(Math.abs(sd)<c.len/2+1.3&&Math.abs(c.lat-w.lat)<1.5){
+            if(c.speed>2&&c.damage<1){const side=Math.sign(sd||1),a=sample(w.d);fwd.copy(sample(w.d+1)).sub(a).normalize();right.crossVectors(fwd,up).normalize();
+              const point=a.clone().addScaledVector(right,w.lat);point.y+=.7;ownGeometry(c.obj);crumple(c.obj,point,fwd.clone().multiplyScalar(side),1.0,.55);c.damage=1;c.cruise=0;}
+            c.speed=0;c.d=w.d+Math.sign(sd||1)*(c.len/2+1.3);}}
         // collisions with other vehicles (police): both get dented, the faster one is slowed
         for(const v of solids){
           const sd=c.d-v.d,reachV=(c.len+v.len)/2;

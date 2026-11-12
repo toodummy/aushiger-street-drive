@@ -46,6 +46,7 @@ export async function loadCar(files){
   pivot.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});
   keepInteriorOutOfWheels(pivot);
   if(/lada-2106/i.test(main.name))trimBeltLine(pivot);
+  await applyPlates(pivot,main.name);
   const eyeMarker=pivot.getObjectByName('Lada_DriverEye'),driverEye=eyeMarker?eyeMarker.getWorldPosition(new THREE.Vector3()):null;
   return {root:pivot,size,driverEye,name:main.name.replace(/\.(glb|gltf)$/i,'')};
  }finally{urls.forEach(u=>URL.revokeObjectURL(u));}
@@ -60,6 +61,56 @@ function fix2106(scene){
   const inward=(o,m)=>{o.getWorldPosition(w);const box=new THREE.Box3().setFromObject(o);box.getCenter(c);const side=Math.sign(c[ax])||1;w[ax]-=side*m;o.position.copy(o.parent.worldToLocal(w.clone()));o.updateMatrixWorld(true);};
   scene.traverse(o=>{if(/^(CPillar_Vent_[LR]|CPillar_Rib_[LR]\d)$/.test(o.name))inward(o,.018*bodyScale);});
   const seat=scene.getObjectByName('Int_Rear_Back_Top');if(seat){seat.scale[ax]*=.9;}
+}
+// Number plates, drawn crisp on a canvas over each plate face (the model's own 3D characters are hidden).
+// Old Soviet-style plate on the 2106; modern Russian plates with region 07 (Kabardino-Balkaria) and the flag.
+const PLATES=[
+  [/lada-2106/i,{kind:'su',text:['А','16 46','КБ']}],
+  [/kalina/i,{kind:'ru',main:['М','848','ММ'],region:'07'}],
+  [/polo/i,{kind:'ru',main:['Т','782','ЕХ'],region:'07'}]
+];
+function drawPlate(p){
+  const W=1040,H=224,c=document.createElement('canvas');c.width=W;c.height=H;const g=c.getContext('2d');
+  const font=(px)=>`700 ${px}px Oswald, "Arial Narrow", Arial, sans-serif`;
+  g.fillStyle='#f4f4f0';g.fillRect(0,0,W,H);g.lineWidth=10;g.strokeStyle='#111';g.beginPath();g.roundRect(9,9,W-18,H-18,22);g.stroke();
+  // bolts
+  g.fillStyle='#9a9a9a';for(const x of [W*.27,W*.73]){g.beginPath();g.arc(x,40,9,0,Math.PI*2);g.fill();}
+  g.fillStyle='#111';g.textBaseline='alphabetic';g.textAlign='center';
+  if(p.kind==='ru'){
+    const split=W*.735;g.beginPath();g.moveTo(split,14);g.lineTo(split,H-14);g.lineWidth=7;g.stroke();
+    // series: small letter, big digits, small letters — as on a real Russian plate
+    const [a,d,b]=p.main,yBase=H*.84;
+    g.font=font(150);g.fillText(a,W*.115,yBase);g.font=font(196);g.fillText(d,W*.335,yBase+4);g.font=font(150);g.fillText(b,W*.6,yBase);
+    g.font=font(132);g.fillText(p.region,split+(W-split)/2,H*.6);
+    g.font=font(44);g.textAlign='right';const fx=W-46,fy=H*.8;g.fillText('RUS',fx-80,fy+2);
+    const fw=66,fh=40,fl=fx-fw;[['#fff'],['#1c48b8'],['#d52b1e']].forEach(([col],i)=>{g.fillStyle=col;g.fillRect(fl,fy-fh+i*fh/3-10,fw,fh/3);});
+    g.strokeStyle='#111';g.lineWidth=2;g.strokeRect(fl,fy-fh-10,fw,fh);
+  }else{
+    const [a,d,b]=p.text,yBase=H*.83;
+    g.font=font(172);g.fillText(a,W*.12,yBase);g.font=font(190);g.fillText(d,W*.46,yBase+2);g.font=font(172);g.fillText(b,W*.83,yBase);
+  }
+  const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=8;return t;
+}
+async function applyPlates(pivot,fileName){
+  const spec=PLATES.find(([re])=>re.test(fileName))?.[1];if(!spec)return;
+  try{await Promise.race([document.fonts.load('700 100px Oswald','АБКМТЕХ0123'),new Promise(r=>setTimeout(r,2500))]);}catch(e){}
+  const tex=drawPlate(spec),mat=new THREE.MeshStandardMaterial({name:'PlateCustom',map:tex,roughness:.45,metalness:0,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2});
+  pivot.updateMatrixWorld(true);const inv=new THREE.Matrix4().copy(pivot.matrixWorld).invert();
+  const faces=[];pivot.traverse(o=>{const m=/^(Front|Rear)_Plate_Face(\.?\d{3})?$/.exec(o.name);if(m&&o.isMesh)faces.push({o,end:m[1],sfx:m[2]||''});});
+  const esc=t=>t.replace('.','\\.'),boxOf=o=>{o.geometry.computeBoundingBox();return o.geometry.boundingBox.clone().applyMatrix4(new THREE.Matrix4().multiplyMatrices(inv,o.matrixWorld));};
+  for(const end of ['Front','Rear']){
+    const set=faces.filter(f=>f.end===end).map(f=>({...f,box:boxOf(f.o)}));if(!set.length)continue;
+    // some models carry a second copy of the plate; use the outermost one and hide the rest
+    set.sort((a,b)=>end==='Front'?a.box.min.z-b.box.min.z:b.box.max.z-a.box.max.z);
+    const use=set[0];
+    for(const other of set.slice(1)){const re=new RegExp('^'+end+'_Plate(_[A-Za-z]+\\d?)?'+esc(other.sfx)+'$');pivot.traverse(o=>{if(re.test(o.name))o.visible=false;});}
+    const parts=new RegExp('^'+end+'_Plate_(L\\d|Num|Region|RUS|Flag\\d|FlagEdge|Divider)'+esc(use.sfx)+'$');
+    pivot.traverse(o=>{if(parts.test(o.name))o.visible=false;});
+    const box=use.box,size=box.getSize(new THREE.Vector3()),ctr=box.getCenter(new THREE.Vector3()),front=end==='Front';
+    const w=Math.max(size.x,.3),h=Math.max(size.y,.08),plane=new THREE.Mesh(new THREE.PlaneGeometry(w*.995,Math.min(h,w*224/1040)),mat);
+    plane.name=end+'_Plate_Custom';plane.position.set(ctr.x,ctr.y,front?box.min.z-.002:box.max.z+.002);if(front)plane.rotation.y=Math.PI;
+    pivot.add(plane);
+  }
 }
 // the chrome belt-line strips run on past the rear door, beyond the narrowing rear wing; end them there
 function trimBeltLine(pivot,endZ=.97){

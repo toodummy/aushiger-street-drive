@@ -230,12 +230,22 @@ export function createCows(scene,sample,{onHit}={}){
         c.d+=Math.cos(c.heading)*c.speed*dt;c.lat+=Math.sin(c.heading)*c.speed*dt;
         c.lat=THREE.MathUtils.clamp(c.lat,-5.4,5.4);
         // collision with the player's car: slow bump pushes, a real hit kills the cow
+        c.bumpCool=Math.max(0,(c.bumpCool||0)-dt);
         if(Math.abs(c.d-player.distance)<3.0&&Math.abs(c.lat-player.lateral)<1.6){
+          // a buffalo is like a wall: it doesn't even notice, and the car is finished
+          if(c.buffalo){
+            if(Math.abs(player.speed)>3.5&&c.bumpCool<=0){c.bumpCool=1.5;const side=Math.sign(player.distance-c.d)||-1,point=world(c.d+side*1.2,c.lat);point.y+=.7;
+              onHit?.({point,amount:1,dir:fwd.clone().multiplyScalar(side)});}
+            player.speed=0;player.cruise=false;player.distance=c.d-Math.sign(c.d-player.distance||1)*3.0;
+          }else{
           if(Math.abs(player.speed)>3.5){kill(c,player,true);continue;}
           player.speed=0;player.cruise=false;player.distance=c.d-Math.sign(c.d-player.distance||1)*3.0;
+          }
         }
         // other vehicles that run animals down (the police car)
-        let rammed=false;for(const r of rams){if(Math.abs(c.d-r.d)<3.0&&Math.abs(c.lat-r.lat)<1.6&&Math.abs(r.speed)>3){kill(c,r,false);rammed=true;break;}}
+        let rammed=false;for(const r of rams){if(Math.abs(c.d-r.d)<3.0&&Math.abs(c.lat-r.lat)<1.6&&Math.abs(r.speed)>3){
+          if(c.buffalo){const side=Math.sign(r.d-c.d)||-1,point=world(c.d+side*1.2,c.lat);point.y+=.7;r.onHit?.({point,amount:1,dir:fwd.clone().multiplyScalar(side),stop:true});break;}
+          kill(c,r,false);rammed=true;break;}}
         if(rammed)continue;
         const p=world(c.d,c.lat),dir=fwd.clone().multiplyScalar(Math.cos(c.heading)).addScaledVector(right,Math.sin(c.heading));
         m4.lookAt(p,p.clone().add(dir),up);c.obj.position.copy(p);c.obj.quaternion.setFromRotationMatrix(m4);

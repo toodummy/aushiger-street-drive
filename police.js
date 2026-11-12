@@ -53,8 +53,8 @@ export function createPolice(scene,sample,{onBump}={}){
   }
   const passLat=p=>p.lateral>0?Math.max(-2.8,p.lateral-3.3):Math.min(2.8,p.lateral+3.3);
   // dents the patrol car; enough hits wreck it and it stops where it is
-  function hurt({point,amount,dir}){
-    if(!car||state==='idle'||hitCool>0)return;hitCool=.5;
+  function hurt({point,amount,dir,stop}){
+    if(!car||state==='idle'||hitCool>0)return;hitCool=.5;if(stop)speed=0;
     crumple(car.root,point,dir,1.0,.1+amount*.5);damage=Math.min(1,damage+amount);speed*=.6;
     if(damage>=1&&state!=='wrecked'){state='wrecked';siren=false;wreckAge=0;}
   }
